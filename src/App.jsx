@@ -15,24 +15,37 @@ import Edit_profile from "./Profile_Pages/Edit_profile";
 import Follow from "./follow/follow";
 import Following from "./follow/following";
 import Map from "./Map/Map";
-import ScrollNavbar from "./components/ScrollNavbar"; 
+import ScrollNavbar from "./components/ScrollNavbar";
 import Explore from "./components/Dashboard";
 import SearchPage from "./Explore/SearchPage";
-import Championship from "./components/Championship";   // ✅ New import
+import Championship from "./components/Championship";
+import { useAuth } from "./context/AuthContext"; // Add this import
 
 const AppLayout = ({ isMobile }) => {
   const location = useLocation();
+  const { user } = useAuth(); // Get auth status
+
+  // ✅ Only hide navs on login/signup pages
+  const authRoutes = ["/login", "/signup"];
+  const isAuthPage = authRoutes.includes(location.pathname);
+  
+  // ✅ For home page, show navs only if user is logged in
+  const isHomePage = location.pathname === "/";
+  const hideNavs = isAuthPage || (isHomePage && !user);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {!isMobile && <Navbar />}
-      {isMobile && location.pathname !== "/" && <ScrollNavbar />}
+      {/* Desktop sidebar - hide on auth pages */}
+      {!isMobile && !hideNavs && <Navbar />}
+      
+      {/* Mobile top navbar - hide on auth pages */}
+      {isMobile && !hideNavs && <ScrollNavbar />}
 
       <main
         className={`
           flex-1 
-          ${!isMobile ? "ml-[240px]" : ""} 
-          ${isMobile ? "pb-14" : ""} 
+          ${!isMobile && !hideNavs ? "ml-[240px]" : ""} 
+          ${isMobile && !hideNavs ? "pb-14" : ""} 
           overflow-x-hidden
         `}
       >
@@ -45,7 +58,8 @@ const AppLayout = ({ isMobile }) => {
             min-h-screen
           `}
         >
-          {isMobile && <BottomNav />}
+          {/* Mobile bottom navbar - hide on auth pages */}
+          {isMobile && !hideNavs && <BottomNav />}
 
           <Routes>
             {/* Public */}
@@ -136,8 +150,6 @@ const AppLayout = ({ isMobile }) => {
                 </PrivateRoute>
               }
             />
-
-            {/* ✅ Championship Route */}
             <Route
               path="/championship"
               element={

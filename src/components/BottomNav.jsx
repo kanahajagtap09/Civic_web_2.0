@@ -92,7 +92,7 @@ const BottomNav = () => {
           >
             {/* Active bar indicator */}
             <div
-              className="absolute top-0 h-1 rounded-full bg-blue-900 transition-all duration-300 ease-out"
+              className="absolute top-0 h-1 rounded-full  transition-all duration-300 ease-out"
               style={{
                 width: "3rem",
                 left: `${activeIndex * (100 / pathItems.length) + (100 / pathItems.length) / 2}%`,
