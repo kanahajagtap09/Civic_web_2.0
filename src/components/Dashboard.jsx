@@ -1,145 +1,141 @@
-// src/pages/Explore.js
-import React, { useEffect, useState, useRef } from "react";
+// src/pages/Leaderboard.js
+import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebase";
 import {
   collection,
   query,
   orderBy,
-  onSnapshot,
-  doc,
-  getDoc,
+  limit,
+  getDocs,
 } from "firebase/firestore";
-import { FaPlay } from "react-icons/fa";
-import PostModal from "../horizontal_tabs/PostModal";
-import { useNavigate } from "react-router-dom";
+import { FaCrown } from "react-icons/fa";
 
-// Fetch user info
-const getUserData = async (userId) => {
-  try {
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      return {
-        username: data.username || data.name || "Unknown",
-        photoURL:
-          data.profileImage?.startsWith("data:") ||
-          data.profileImage?.startsWith("http")
-            ? data.profileImage
-            : data.profileImage
-            ? `data:image/jpeg;base64,${data.profileImage}`
-            : "/default-avatar.png",
-      };
-    }
-  } catch (err) {
-    console.error("Error fetching user data:", err);
-  }
-  return { username: "Unknown", photoURL: "/default-avatar.png" };
-};
+export default function Leaderboard() {
+  const [leaderboard, setLeaderboard] = useState([]);
 
-export default function Explore() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState(null);
-  const userCache = useRef({});
-  const navigate = useNavigate();
-
-  // Fetch posts
   useEffect(() => {
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const postDocs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const fetchLeaderboard = async () => {
+      try {
+        const q = query(
+          collection(db, "userSticks"),
+          orderBy("points", "desc"),
+          limit(10)
+        );
+        const snap = await getDocs(q);
 
-      const enriched = await Promise.all(
-        postDocs.map(async (post) => {
-          if (post.userId) {
-            if (!userCache.current[post.userId]) {
-              userCache.current[post.userId] = await getUserData(post.userId);
-            }
-            return { ...post, user: userCache.current[post.userId] };
-          }
-          return {
-            ...post,
-            user: { username: "Unknown", photoURL: "/default-avatar.png" },
-          };
-        })
-      );
+        const usersData = await Promise.all(
+          snap.docs.map(async (d) => {
+            const stickData = d.data();
 
-      setPosts(enriched);
-      setLoading(false);
-    });
+            // Try fetching user profile
+            const uSnap = await getDocs(collection(db, "users"));
+            const uDoc = uSnap.docs.find((u) => u.id === stickData.uid);
 
-    return () => unsubscribe();
+            return {
+              uid: stickData.uid,
+              points: stickData.points || 0,
+              level: stickData.level ?? 0,
+              currentStreak: stickData.currentStreak || 0,
+              badge: stickData.badge || "None",
+              name: uDoc?.data()?.name || "Unknown",
+              photoURL:
+                uDoc?.data()?.profileImage?.startsWith("http") ||
+                uDoc?.data()?.profileImage?.startsWith("data:")
+                  ? uDoc.data().profileImage
+                  : uDoc?.data()?.profileImage
+                  ? `data:image/jpeg;base64,${uDoc.data().profileImage}`
+                  : "/default-avatar.png",
+            };
+          })
+        );
+
+        setLeaderboard(usersData);
+      } catch (err) {
+        console.error("Leaderboard fetch error:", err);
+      }
+    };
+
+    fetchLeaderboard();
   }, []);
 
+  const podium = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
+
   return (
-    <div className="min-h-screen bg-white pb-20">
-      {/* Search Bar */}
-      <div className="px-4 py-3 sticky top-0 bg-white z-50 border-b flex justify-center">
-        <input
-          type="text"
-          placeholder="Search"
-          onFocus={() => navigate("/search")} // 🚀 Redirect to SearchPage
-          className="w-full max-w-md text-sm px-4 py-2 rounded-full border border-gray-300 bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400 cursor-pointer"
-          readOnly // Prevents typing here, redirects instead
-        />
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-purple-600 via-purple-700 to-purple-900 text-white p-6">
+      <h1 className="text-2xl font-bold flex items-center gap-2 mb-6">
+        <FaCrown className="text-yellow-300" /> LEADERBOARD
+      </h1>
 
-      {/* Loading skeleton grid */}
-      {loading ? (
-        <div className="grid grid-cols-3 gap-px mt-1 max-w-5xl mx-auto animate-pulse">
-          {[...Array(12)].map((_, i) => (
-            <div key={i} className="aspect-square bg-gray-200" />
-          ))}
+      {/* Podium */}
+      {podium.length > 0 && (
+        <div className="flex justify-center items-end gap-6 mb-8">
+          {/* 2nd */}
+          {podium[1] && (
+            <div className="flex flex-col items-center">
+              <img
+                src={podium[1].photoURL}
+                alt={podium[1].name}
+                className="w-14 h-14 rounded-full border-2 border-white"
+              />
+              <p className="text-xs mt-1">@{podium[1].name}</p>
+              <p className="font-bold text-yellow-300">{podium[1].points} pts</p>
+            </div>
+          )}
+
+          {/* 1st */}
+          {podium[0] && (
+            <div className="flex flex-col items-center -mt-8">
+              <FaCrown className="text-yellow-400 text-2xl mb-1" />
+              <img
+                src={podium[0].photoURL}
+                alt={podium[0].name}
+                className="w-16 h-16 rounded-full border-2 border-yellow-400"
+              />
+              <p className="text-sm mt-1 font-bold">@{podium[0].name}</p>
+              <p className="font-bold text-yellow-300">{podium[0].points} pts</p>
+            </div>
+          )}
+
+          {/* 3rd */}
+          {podium[2] && (
+            <div className="flex flex-col items-center">
+              <img
+                src={podium[2].photoURL}
+                alt={podium[2].name}
+                className="w-14 h-14 rounded-full border-2 border-white"
+              />
+              <p className="text-xs mt-1">@{podium[2].name}</p>
+              <p className="font-bold text-yellow-300">{podium[2].points} pts</p>
+            </div>
+          )}
         </div>
-      ) : (
-        <>
-          {/* Masonry Grid */}
-          <div className="grid grid-cols-3 gap-px mt-1 sm:gap-1 max-w-5xl mx-auto">
-            {posts.map((post) =>
-              post.image ? (
-                <div
-                  key={post.id}
-                  className="relative group cursor-pointer aspect-square overflow-hidden"
-                  onClick={() => setSelectedPost(post)}
-                >
-                  {/* Post Thumbnail */}
-                  <img
-                    src={post.image}
-                    alt={post.text || "Post"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-
-                  {/* Reel/Video Icon */}
-                  <div className="absolute top-2 right-2 bg-black bg-opacity-50 p-1 rounded-full">
-                    <FaPlay className="text-white text-xs" />
-                  </div>
-
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-40 hidden group-hover:flex items-center justify-center gap-4 text-white font-semibold transition-opacity">
-                    <div className="flex items-center gap-1 text-sm">
-                      ❤️ {post.likes?.length || 0}
-                    </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      💬 {post.comments?.length || 0}
-                    </div>
-                  </div>
-                </div>
-              ) : null
-            )}
-          </div>
-
-          {/* Modal */}
-          <PostModal
-            open={!!selectedPost}
-            handleClose={() => setSelectedPost(null)}
-            post={selectedPost}
-          />
-        </>
       )}
+
+      {/* Rest of leaderboard */}
+      <div className="space-y-3 max-w-md mx-auto">
+        {rest.map((player, idx) => (
+          <div
+            key={player.uid}
+            className="flex items-center justify-between bg-purple-800 px-4 py-2 rounded-lg shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-purple-900 font-bold">
+                {idx + 4}
+              </div>
+              <img
+                src={player.photoURL}
+                alt={player.name}
+                className="w-8 h-8 rounded-full border border-white"
+              />
+              <span className="font-semibold text-sm">@{player.name}</span>
+            </div>
+            <span className="font-bold text-yellow-300">
+              {player.points} pts
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,23 +1,32 @@
-// src/components/BottomNav.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  FiHome,
-  FiUser,
-  FiPlusCircle,
-  FiHeart,
-  FiSearch,
-} from "react-icons/fi"; // ✅ Feather icons
+  HomeIcon,
+  PlusCircleIcon,
+  BellIcon,
+  AcademicCapIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
+
+import {
+  HomeIcon as HomeSolid,
+  PlusCircleIcon as PlusCircleSolid,
+  BellIcon as BellSolid,
+  AcademicCapIcon as AcademicCapSolid,
+  MagnifyingGlassIcon as MagnifyingGlassSolid,
+} from "@heroicons/react/24/solid";
+
 import { useAuth } from "../context/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PostCreatorModal from "./PostCreatorModal";
 
 const BottomNav = () => {
-  const { user, firestoreUser } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -25,118 +34,128 @@ const BottomNav = () => {
   };
 
   const navItems = [
-    { name: "Home", path: "/", icon: <FiHome /> },
-    { name: "Explore", path: "/dashboard", icon: <FiSearch /> },
+    {
+      name: "Home",
+      path: "/",
+      icon: <HomeIcon className="w-6 h-6" />,
+      iconActive: <HomeSolid className="w-6 h-6" />,
+    },
+    {
+      name: "Explore",
+      path: "/dashboard",
+      icon: <MagnifyingGlassIcon className="w-6 h-6" />,
+      iconActive: <MagnifyingGlassSolid className="w-6 h-6" />,
+    },
+    {
+      name: "Championship",
+      path: "/championship",
+      icon: <AcademicCapIcon className="w-6 h-6" />,
+      iconActive: <AcademicCapSolid className="w-6 h-6" />,
+    },
     ...(user
       ? [
           {
             name: "Post",
-            icon: <FiPlusCircle />,
             isCenter: true,
+            icon: <PlusCircleIcon className="w-9 h-9 text-white" />,
+            iconActive: <PlusCircleSolid className="w-9 h-9" />,
           },
         ]
       : []),
-    { name: "Notification", path: "/about", icon: <FiHeart /> },
-    { name: "Profile", path: "/profile", icon: <FiUser /> },
+    {
+      name: "Notification",
+      path: "/about",
+      icon: <BellIcon className="w-6 h-6" />,
+      iconActive: <BellSolid className="w-6 h-6" />,
+    },
   ];
+
+  // Only items with real paths for indicator tracking
+  const pathItems = navItems.filter(item => item.path);
+
+  useEffect(() => {
+    const currentIndex = pathItems.findIndex(
+      item => item.path === location.pathname
+    );
+    if (currentIndex !== -1) {
+      setActiveIndex(currentIndex);
+    }
+  }, [location.pathname]);
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <ul className="flex justify-around items-center h-14 px-2 max-w-lg mx-auto">
-          {navItems.map((item, index) => {
-            const isActive = location.pathname === item.path;
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+        <div className="w-full max-w-md px-3 mb-3">
+          <ul
+            className="relative flex justify-around items-center h-20
+              bg-white/90 border border-gray-200 rounded-t-2xl shadow-xl backdrop-blur-md"
+          >
+            {/* Active bar indicator */}
+            <div
+              className="absolute top-0 h-1 rounded-full bg-blue-900 transition-all duration-300 ease-out"
+              style={{
+                width: "3rem",
+                left: `${activeIndex * (100 / pathItems.length) + (100 / pathItems.length) / 2}%`,
+                transform: "translateX(-50%)",
+              }}
+            />
 
-            const baseStyle =
-              "flex flex-col items-center justify-center text-xs transition duration-300 group cursor-pointer";
-            const activeStyle = item.isCenter
-              ? "absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-tr from-blue-400 via-blue-500 to-blue-600 text-white w-14 h-14 rounded-full shadow-lg border-4 border-white text-xl z-10"
-              : isActive
-              ? "text-blue-500"
-              : "text-gray-500";
+            {navItems.map((item, index) => {
+              const isActive = location.pathname === item.path;
 
-            return (
-              <li key={index} className={`${baseStyle} ${activeStyle}`}>
-                {item.isCenter ? (
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full h-full flex items-center justify-center focus:outline-none"
+              // Floating Action Button
+              if (item.isCenter) {
+                return (
+                  <li
+                    key={index}
+                    className="absolute -top-10 left-1/2 transform -translate-x-1/2 z-20"
                   >
-                    <span className="text-2xl transition-all duration-300 transform group-hover:-translate-y-1 group-hover:scale-110">
-                      {item.icon}
-                    </span>
-                  </button>
-                ) : (
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="bg-gray-600
+                        w-16 h-16 rounded-full border-4 border-white 
+                        flex items-center justify-center shadow-lg 
+                        transition-transform duration-300 hover:scale-110"
+                    >
+                      {isActive ? item.iconActive : item.icon}
+                    </button>
+                  </li>
+                );
+              }
+
+              // Regular nav buttons
+              return (
+                <li
+                  key={index}
+                  className="flex flex-col items-center justify-center text-xs group"
+                >
                   <Link
                     to={item.path}
+                    onClick={() => setActiveIndex(index)}
                     className="flex flex-col items-center justify-center focus:outline-none"
                   >
                     <span
-                      className={`text-2xl transition-all duration-300 transform group-hover:-translate-y-1 group-hover:scale-110 group-hover:text-blue-500 ${
-                        isActive ? "text-blue-500" : ""
-                      }`}
+                      className={`transition-transform duration-300 transform 
+                        group-hover:-translate-y-1 group-hover:scale-110
+                        ${isActive ? "text-blue-600" : "text-gray-500"}`}
                     >
-                      {item.icon}
+                      {isActive ? item.iconActive : item.icon}
                     </span>
                     <span
-                      className={`text-[11px] mt-1 tracking-wide transition-all duration-300 group-hover:-translate-y-1 group-hover:text-blue-500 ${
-                        isActive ? "text-blue-500" : "text-gray-500"
-                      }`}
+                      className={`text-[11px] mt-1 tracking-wide transition-all duration-300 
+                        ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"}`}
                     >
                       {item.name}
                     </span>
                   </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Auth Status - Hide on /profile */}
-        {location.pathname !== "/profile" && (
-          <div className="absolute right-4 top-[-64px] flex items-center gap-3">
-            {user ? (
-              <>
-                <div className="relative group">
-                  <img
-                    src={
-                      firestoreUser?.profileImage ||
-                      user?.photoURL ||
-                      "/default-profile.png"
-                    }
-                    alt={user.displayName ?? "User"}
-                    className="w-10 h-10 rounded-full border-2 border-blue-500 object-cover shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
-                    title={user.email}
-                  />
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="text-xs flex items-center gap-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 py-1.5 px-4 rounded-full text-white shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/login"
-                  className="px-4 py-1.5 rounded-full border border-blue-500 text-blue-600 bg-white font-medium shadow-sm hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 text-sm"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-md hover:from-blue-600 hover:to-blue-700 hover:scale-105 transition-all duration-200 text-sm"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </nav>
 
-      {/* Modal only available when user is logged in */}
+      {/* Post modal */}
       {user && (
         <PostCreatorModal
           isOpen={isModalOpen}
