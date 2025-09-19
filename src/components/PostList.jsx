@@ -316,7 +316,7 @@ export default function PostList() {
                     {/* Caption/Description + Tags under photo */}
                     <div className="px-2 ">
                       {post.description && (
-                        <p className="text-2xl font-bold text-gray-600">{post.description}</p>
+                        <p className="text-xl font-bold text-gray-600">{post.description}</p>
                       )}
                       {post.text && (
                         <p className="text-sm text-gray-600 ">{post.text}</p>

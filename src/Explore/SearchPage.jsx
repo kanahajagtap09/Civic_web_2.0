@@ -89,23 +89,23 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 🔹 Fancy Search Bar */}
-      <div className="sticky top-0 z-50 flex items-center gap-3 px-3 py-2 border-b bg-white">
+      {/* 🔹 Taller Fancy Search Bar */}
+      <div className="sticky top-0 z-50 flex items-center gap-4 px-4 py-4 border-b bg-white h-20">
         {/* Back Button */}
-        <button onClick={() => navigate(-1)} className="text-gray-700 text-xl">
+        <button onClick={() => navigate(-1)} className="text-gray-700 text-2xl">
           <FaArrowLeft />
         </button>
 
-        {/* Rounded Search Box */}
-        <div className="flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 flex-1">
-          <FaSearch className="text-gray-500 mr-2" />
+        {/* Larger Rounded Search Box */}
+        <div className="flex items-center bg-gray-100 border border-gray-300 rounded-full px-4 py-3 flex-1 h-12">
+          <FaSearch className="text-gray-500 mr-2 text-lg" />
           <input
             type="text"
             autoFocus
             placeholder="Search users"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
+            className="bg-transparent flex-1 outline-none text-base text-gray-800 placeholder-gray-400"
           />
 
           {/* Clear button (X) when typing */}
@@ -120,7 +120,7 @@ export default function SearchPage() {
         </div>
 
         {/* Paper plane icon */}
-        <button className="text-blue-500 text-xl">
+        <button className="text-[#782048] text-2xl">
           <FaPaperPlane />
         </button>
       </div>

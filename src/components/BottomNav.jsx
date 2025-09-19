@@ -112,7 +112,7 @@ const BottomNav = () => {
                   >
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className="bg-gray-600
+                      className="bg-[#782048]
                         w-16 h-16 rounded-full border-4 border-white 
                         flex items-center justify-center shadow-lg 
                         transition-transform duration-300 hover:scale-110"
@@ -137,13 +137,13 @@ const BottomNav = () => {
                     <span
                       className={`transition-transform duration-300 transform 
                         group-hover:-translate-y-1 group-hover:scale-110
-                        ${isActive ? "text-blue-600" : "text-gray-500"}`}
+                        ${isActive ? "text-[#782048]" : "text-gray-500"}`}
                     >
                       {isActive ? item.iconActive : item.icon}
                     </span>
                     <span
                       className={`text-[11px] mt-1 tracking-wide transition-all duration-300 
-                        ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"}`}
+                        ${isActive ? "text-[#782048]" : "text-gray-500 group-hover:text-blue-600"}`}
                     >
                       {item.name}
                     </span>

@@ -149,7 +149,7 @@ export default function Following() {
   );
 
   return (
-    <div className="max-w-md mx-auto mt-8 bg-white rounded-lg shadow border border-gray-200">
+    <div className="max-w-md mx-auto mt-23 md:mt-4  bg-white rounded-lg shadow border border-gray-200">
       {/* Header */}
       <div className="flex flex-col items-center pt-4 pb-2">
         <div className="font-bold text-lg">Following</div>

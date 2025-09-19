@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+
 import CommentHomeFeed from "./Home/CommentHomeFeed";
 import Navbar from "./components/Nav";
 import BottomNav from "./components/BottomNav";
@@ -19,26 +20,32 @@ import ScrollNavbar from "./components/ScrollNavbar";
 import Explore from "./components/Dashboard";
 import SearchPage from "./Explore/SearchPage";
 import Championship from "./components/Championship";
-import { useAuth } from "./context/AuthContext"; // Add this import
+import { useAuth } from "./context/AuthContext";
+import ScrollToTop from "./ScrollToTop";
 
+// ✅ Import the new pages
+import Updates from "./topbarUpdates/Updates";
+import Details from "./topbarUpdates/Details";
+
+// Layout separates nav + main content
 const AppLayout = ({ isMobile }) => {
   const location = useLocation();
-  const { user } = useAuth(); // Get auth status
+  const { user } = useAuth();
 
-  // ✅ Only hide navs on login/signup pages
+  // ✅ Hide navs on login/signup pages
   const authRoutes = ["/login", "/signup"];
   const isAuthPage = authRoutes.includes(location.pathname);
-  
-  // ✅ For home page, show navs only if user is logged in
+
+  // ✅ For home page, show navs only if user logged in
   const isHomePage = location.pathname === "/";
   const hideNavs = isAuthPage || (isHomePage && !user);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Desktop sidebar - hide on auth pages */}
+      {/* Desktop sidebar */}
       {!isMobile && !hideNavs && <Navbar />}
-      
-      {/* Mobile top navbar - hide on auth pages */}
+
+      {/* Mobile top navbar */}
       {isMobile && !hideNavs && <ScrollNavbar />}
 
       <main
@@ -49,6 +56,9 @@ const AppLayout = ({ isMobile }) => {
           overflow-x-hidden
         `}
       >
+        {/* ✅ This ensures scrolling resets on every route change */}
+        <ScrollToTop />
+
         <div
           className={`
             max-w-4xl 
@@ -58,7 +68,7 @@ const AppLayout = ({ isMobile }) => {
             min-h-screen
           `}
         >
-          {/* Mobile bottom navbar - hide on auth pages */}
+          {/* Mobile bottom navbar */}
           {isMobile && !hideNavs && <BottomNav />}
 
           <Routes>
@@ -155,6 +165,24 @@ const AppLayout = ({ isMobile }) => {
               element={
                 <PrivateRoute>
                   <Championship />
+                </PrivateRoute>
+              }
+            />
+
+            {/* ✅ New Updates routes */}
+            <Route
+              path="/updates"
+              element={
+                <PrivateRoute>
+                  <Updates />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/details/:id"
+              element={
+                <PrivateRoute>
+                  <Details />
                 </PrivateRoute>
               }
             />
