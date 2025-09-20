@@ -50,7 +50,7 @@ const Navbar = () => {
       <nav className="fixed left-0 top-0 h-screen w-[240px] bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto overflow-x-hidden">
         {/* Logo */}
         <Link to="/" className="mb-8 pl-2">
-          <h1 className="text-2xl font-bold cursor-pointer">City Pulse</h1>
+          <h1 className="text-2xl font-bold cursor-pointer">CIVIC</h1>
         </Link>
 
         {/* Navigation Items */}
