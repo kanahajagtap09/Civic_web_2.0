@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import CommentHomeFeed from "./Home/CommentHomeFeed";
@@ -30,29 +30,34 @@ import Details from "./topbarUpdates/Details";
 // Layout separates nav + main content
 const AppLayout = ({ isMobile }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  // ✅ Hide navs on login/signup pages
+  // ✅ Define public routes that don't require authentication
+  const publicRoutes = ["/login", "/signup", "/about", "/contact"];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+
+  // ✅ If not loading, not logged in, and not on a public route, redirect to login
+  if (!loading && !user && !isPublicRoute) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ✅ Hide navs only on login/signup pages
   const authRoutes = ["/login", "/signup"];
-  const isAuthPage = authRoutes.includes(location.pathname);
-
-  // ✅ For home page, show navs only if user logged in
-  const isHomePage = location.pathname === "/";
-  const hideNavs = isAuthPage || (isHomePage && !user);
+  const hideNavs = authRoutes.includes(location.pathname);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Desktop sidebar */}
-      {!isMobile && !hideNavs && <Navbar />}
+      {/* Desktop sidebar - only show when logged in and not on auth pages */}
+      {!isMobile && !hideNavs && user && <Navbar />}
 
-      {/* Mobile top navbar */}
-      {isMobile && !hideNavs && <ScrollNavbar />}
+      {/* Mobile top navbar - only show when logged in and not on auth pages */}
+      {isMobile && !hideNavs && user && <ScrollNavbar />}
 
       <main
         className={`
           flex-1 
-          ${!isMobile && !hideNavs ? "ml-[240px]" : ""} 
-          ${isMobile && !hideNavs ? "pb-14" : ""} 
+          ${!isMobile && !hideNavs && user ? "ml-[240px]" : ""} 
+          ${isMobile && !hideNavs && user ? "pb-14" : ""} 
           overflow-x-hidden
         `}
       >
@@ -68,18 +73,25 @@ const AppLayout = ({ isMobile }) => {
             min-h-screen
           `}
         >
-          {/* Mobile bottom navbar */}
-          {isMobile && !hideNavs && <BottomNav />}
+          {/* Mobile bottom navbar - only show when logged in and not on auth pages */}
+          {isMobile && !hideNavs && user && <BottomNav />}
 
           <Routes>
-            {/* Public */}
-            <Route path="/" element={<Home />} />
+            {/* Public routes - accessible without login */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
 
-            {/* Protected */}
+            {/* Protected routes - require authentication */}
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Home />
+                </PrivateRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -186,6 +198,9 @@ const AppLayout = ({ isMobile }) => {
                 </PrivateRoute>
               }
             />
+
+            {/* Catch all - redirect to login if not authenticated */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
       </main>
