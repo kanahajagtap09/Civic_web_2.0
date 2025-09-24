@@ -17,8 +17,8 @@ import { MdOutlineExplore } from 'react-icons/md';
 import { FiMapPin } from "react-icons/fi";
 
 // Heroicons for Updates
-import { MegaphoneIcon } from "@heroicons/react/24/outline";
-import { MegaphoneIcon as MegaphoneIconSolid } from "@heroicons/react/24/solid";
+import { MegaphoneIcon, AcademicCapIcon } from "@heroicons/react/24/outline";
+import { MegaphoneIcon as MegaphoneIconSolid, AcademicCapIcon as AcademicCapIconSolid } from "@heroicons/react/24/solid";
 
 // Import your Post modal
 import PostCreatorModal from "./PostCreatorModal";
@@ -72,6 +72,13 @@ const Navbar = () => {
             icon={<MdOutlineExplore size={24} />}
             text="Explore"
             active={location.pathname === '/explore'}
+          />
+
+          <NavItem
+            to="/championship"
+            icon={location.pathname === '/championship' ? <AcademicCapIconSolid className="w-6 h-6" /> : <AcademicCapIcon className="w-6 h-6" />}
+            text="Championship"
+            active={location.pathname === '/championship'}
           />
 
           {/* Create Post Button */}

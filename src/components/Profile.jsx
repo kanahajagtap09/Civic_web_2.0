@@ -185,7 +185,7 @@ const Profile = () => {
           {/* Dashboard Button */}
           <div className="mt-4 flex justify-center">
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/championship")}
               className="bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-md transition"
             >
               Go to LeaderBoard
