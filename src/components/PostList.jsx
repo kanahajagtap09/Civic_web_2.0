@@ -90,7 +90,7 @@ const StatusBadge = ({ status }) => {
   return {
   
     text: "Pending",
-    gradient: "from-gray-400 via-blue-500 to-indigo-600",
+    gradient: "from-red-400 via-red-500 to-red-600",
     textColor: "text-white",
     borderColor: "border-indigo-300",
     shadowColor: "shadow-indigo-500/30",
