@@ -169,16 +169,17 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     try {
       setIsPosting(true);
 
-      // ✅ Build post data
-      const postRef = doc(collection(db, "posts"));
-      const postData = {
-        uid: user.uid,
-        description,
-        imageUrl: imageData || null,
-        tags,
-        geoData,
-        createdAt: serverTimestamp(),
-      };
+    // ✅ Build post data with status
+const postRef = doc(collection(db, "posts"));
+const postData = {
+  uid: user.uid,
+  description,
+  imageUrl: imageData || null,
+  tags,
+  geoData,
+  createdAt: serverTimestamp(),
+  status: "pending", // ✅ initial status is "pending"
+};
 
       // ✅ Atomic write for post + postCount increment
       const batch = writeBatch(db);

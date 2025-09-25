@@ -1,4 +1,3 @@
-// src/components/PostList.jsx (or wherever your PostList is located)
 import React, { useEffect, useState, useRef } from "react";
 import { db } from "../firebase/firebase";
 import {
@@ -26,16 +25,21 @@ import {
   FaBookmark,
   FaSpinner,
   FaMapMarkerAlt,
+  FaExclamationTriangle,
+  FaUserTie,
+  FaSpinner as FaProgress,
+  FaCheckCircle,
 } from "react-icons/fa";
 import SuggestionsBar from "./Sugestionbar";
 import { useNavigate } from "react-router-dom";
 import geotagphoto from "../assets/geotagMapphoto.webp";
-import ScrollNavbar from "./ScrollNavbar"; // Add this import
+import ScrollNavbar from "./ScrollNavbar";
+import verifyTick from "../assets/Blue_tick.png";
 
 // ----------------- Safe Photo Resolver -----------------
 const resolvePhotoURL = (val) => {
   if (typeof val !== "string" || !val.trim()) {
-    return "/default-avatar.png"; // fallback image
+    return "/default-avatar.png";
   }
   if (val.startsWith("http") || val.startsWith("data:")) {
     return val;
@@ -46,7 +50,12 @@ const resolvePhotoURL = (val) => {
 // ----------------- User data helper -----------------
 const getUserData = async (userId) => {
   if (!userId) {
-    return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
+    return {
+      id: "unknown",
+      username: "Unknown",
+      photoURL: "/default-avatar.png",
+      userRole: "user",
+    };
   }
   try {
     const uRef = doc(db, "users", userId);
@@ -57,12 +66,96 @@ const getUserData = async (userId) => {
         id: userId,
         username: data.username || data.name || "Unknown",
         photoURL: resolvePhotoURL(data.profileImage),
+        userRole: data.userRole || "user",
       };
     }
   } catch (err) {
     console.error("user fetch error:", err);
   }
-  return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
+  return {
+    id: "unknown",
+    username: "Unknown",
+    photoURL: "/default-avatar.png",
+    userRole: "user",
+  };
+};
+
+// ----------------- Enhanced Status Badge Renderer -----------------
+const StatusBadge = ({ status }) => {
+  const getStatusConfig = (status) => {
+    const normalizedStatus = status?.toLowerCase();
+
+    switch (normalizedStatus) {
+    case "pending":
+  return {
+  
+    text: "Pending",
+    gradient: "from-gray-400 via-blue-500 to-indigo-600",
+    textColor: "text-white",
+    borderColor: "border-indigo-300",
+    shadowColor: "shadow-indigo-500/30",
+    pulseColor: "animate-pulse",
+  };
+       
+      case "assign":
+        return {
+          icon: <FaUserTie className="w-3 h-3" />,
+          text: "Assigned",
+          gradient: "from-amber-400 via-yellow-500 to-orange-500",
+          textColor: "text-black",
+          borderColor: "border-yellow-300",
+          shadowColor: "shadow-yellow-500/40",
+          pulseColor: "",
+        };
+      case "at progress":
+        return {
+          icon: <FaProgress className="w-3 h-3 animate-spin" />,
+          text: "In Progress",
+          gradient: "from-blue-500 via-blue-600 to-indigo-600",
+          textColor: "text-white",
+          borderColor: "border-blue-300",
+          shadowColor: "shadow-blue-500/40",
+          pulseColor: "",
+        };
+      case "resolved":
+        return {
+          icon: <FaCheckCircle className="w-3 h-3" />,
+          text: "Resolved",
+          gradient: "from-emerald-500 via-green-600 to-green-700",
+          textColor: "text-white",
+          borderColor: "border-green-300",
+          shadowColor: "shadow-green-500/40",
+          pulseColor: "",
+        };
+      default:
+        return {
+          icon: <FaExclamationTriangle className="w-3 h-3" />,
+          text: status || "Unknown",
+          gradient: "from-gray-400 to-gray-500",
+          textColor: "text-white",
+          borderColor: "border-gray-300",
+          shadowColor: "shadow-gray-500/30",
+          pulseColor: "",
+        };
+    }
+  };
+
+  const config = getStatusConfig(status);
+
+  return (
+    <div
+      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full 
+        bg-gradient-to-r ${config.gradient} ${config.textColor} 
+        ${config.borderColor} border ${config.shadowColor} shadow-md 
+        backdrop-blur-sm ${config.pulseColor} transform transition-all 
+        duration-300 hover:scale-105 hover:shadow-lg`}
+    >
+      {config.icon}
+      <span className="text-[10px] font-semibold uppercase tracking-wide">
+        {config.text}
+      </span>
+    </div>
+  );
 };
 
 // ----------------- Main PostList --------------------
@@ -83,13 +176,13 @@ export default function PostList() {
   const navigate = useNavigate();
   const auth = getAuth();
 
-  // Check if mobile on resize
+  // Resize handler
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 697);
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Persist likes
@@ -102,7 +195,7 @@ export default function PostList() {
     return stored ? JSON.parse(stored).length : 0;
   };
 
-  // Auth listener
+  // Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -115,7 +208,7 @@ export default function PostList() {
     return () => unsubscribe();
   }, [auth]);
 
-  // Fetch following list
+  // Fetch following
   useEffect(() => {
     if (!currentUserId) {
       setFollowingIds([]);
@@ -161,7 +254,7 @@ export default function PostList() {
     return () => unsub();
   }, [currentUserId]);
 
-  // Like toggle
+  // Toggle like
   const toggleLike = (pid) =>
     setLikes((prev) => ({ ...prev, [pid]: !prev[pid] }));
 
@@ -173,7 +266,13 @@ export default function PostList() {
     const userRef = doc(db, "users", currentUserId);
     const theirUserRef = doc(db, "users", userId);
     const myFollowingDoc = doc(db, "users", currentUserId, "following", userId);
-    const theirFollowersDoc = doc(db, "users", userId, "followers", currentUserId);
+    const theirFollowersDoc = doc(
+      db,
+      "users",
+      userId,
+      "followers",
+      currentUserId
+    );
     const isFollowing = followingIds.includes(userId);
 
     try {
@@ -210,18 +309,22 @@ export default function PostList() {
     }
   };
 
-  // Guard
-  if (!authChecked) return <p className="text-center py-6">Checking authentication...</p>;
-  if (!currentUserId) return <div className="text-center py-6"><p className="text-gray-600">🚀 Please log in to see posts.</p></div>;
+  // Guard states
+  if (!authChecked)
+    return <p className="text-center py-6">Checking authentication...</p>;
+  if (!currentUserId)
+    return (
+      <div className="text-center py-6">
+        <p className="text-gray-600">🚀 Please log in to see posts.</p>
+      </div>
+    );
   if (loading) return <p className="text-center py-6">Loading feed...</p>;
 
   return (
     <>
-      {/* Add ScrollNavbar for mobile */}
       {isMobile && <ScrollNavbar />}
-      
+
       <div className="max-w-lg mx-auto mt-6 space-y-6">
-        {/* Mark the SuggestionsBar as the first section */}
         <div id="first-section">
           <SuggestionsBar />
         </div>
@@ -240,7 +343,8 @@ export default function PostList() {
               className="rounded-3xl overflow-hidden bg-[#eaf0ff] shadow-md border border-gray-200 "
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-4 pt-3">
+              <div className="flex items-start justify-between px-4 pt-3">
+                {/* Left User Info */}
                 <div className="flex items-center gap-3">
                   <img
                     src={avatar}
@@ -248,78 +352,118 @@ export default function PostList() {
                     alt={username}
                   />
                   <div>
-                    <p className="font-semibold text-sm">{username}</p>
+                    <p className="font-semibold text-sm flex items-center gap-1">
+                      {username}
+                      {post.user?.userRole === "Department" && (
+                        <img
+                          src={verifyTick}
+                          alt="verified"
+                          className="w-4 h-4"
+                          title="Verified Department"
+                        />
+                      )}
+                    </p>
                     <p className="text-xs text-[#782048]">@{username}</p>
                     <p className="text-[10px] text-gray-500">
-                      {formatDistanceToNow(post.createdAt?.toDate?.() || new Date(), { addSuffix: true })}
+                      {formatDistanceToNow(
+                        post.createdAt?.toDate?.() || new Date(),
+                        { addSuffix: true }
+                      )}
                     </p>
                   </div>
                 </div>
 
-                {!isOwnPost && (
-                  <button
-                    onClick={() => handleFollowToggle(post.user?.id)}
-                    disabled={isLoading}
-                    className={`px-3 py-1 text-xs rounded-full font-medium ${
-                      isFollowed
-                        ? "bg-gray-200 text-gray-700"
-                        : "bg-blue-500 text-white"
-                    }`}
-                  >
-                    {isLoading ? (
-                      <FaSpinner className="animate-spin inline w-3 h-3" />
-                    ) : isFollowed ? (
-                      "Following"
-                    ) : (
-                      "Follow"
-                    )}
-                  </button>
-                )}
+                {/* Right Buttons */}
+                <div className="flex flex-col items-end gap-2">
+                  {!isOwnPost && (
+                    <button
+                      onClick={() => handleFollowToggle(post.user?.id)}
+                      disabled={isLoading}
+                      className={`px-4 py-2 text-sm rounded-full font-bold transition ${
+                        isFollowed
+                          ? "bg-gray-200 text-gray-700"
+                          : "bg-blue-500 text-white"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <FaSpinner className="animate-spin inline w-4 h-4" />
+                      ) : isFollowed ? (
+                        "Following"
+                      ) : (
+                        "Follow"
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Image + Caption + ActionBar */}
+              {/* Post Image + Extras */}
               {post.imageUrl && (
-                <div className="relative  px-3 mt-2 mb-5">
-                  <div className="rounded-4xl overflow-hidden bg-transparent ">
-                    {/* Photo */}
+                <div className="relative px-3 mt-2 mb-5">
+                  <div className="relative rounded-4xl overflow-hidden bg-transparent ">
                     <img
                       src={post.imageUrl}
-                      className=" w-full max-h-[380px]  object-cover rounded-4xl"
+                      className="w-full max-h-[380px] object-cover rounded-4xl"
                       alt=""
                     />
 
-                    {/* GeoTag stays same */}
+                    {/* Floating Status Badge */}
+                    {post.status && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <StatusBadge status={post.status} />
+                      </div>
+                    )}
+
+                    {/* GeoTag */}
                     {post.geoData && (
-                      <div className="absolute bottom-25 left-1/2 -translate-x-1/2 w-[90%] sm:w-4/5 
-                                        text-white 
-                                      rounded-xl shadow-lg flex overflow-hidden ">
-                        <div className="w-24 sm:w-28 h-25 bg-transparent sm:h-24 flex-shrink-0 overflow-hidden">
-                          <img src={geotagphoto} alt="Map Preview" className="w-full h-full object-cover" />
+                      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-full  
+                                      text-white rounded-b-4xl shadow-lg flex overflow-hidden">
+                        <div className="w-24 sm:w-28  h-25   bg-transparent sm:h-24 flex-shrink-0 overflow-hidden">
+                          <img
+                            src={geotagphoto}
+                            alt="Map Preview"
+                            className="w-full h-full  object-cover"
+                          />
                         </div>
-                        <div className=" bg-black/80 text-white flex flex-col justify-center px-3 py-2 flex-1 text-xs sm:text-sm">
+                        <div className="bg-black/80 text-white flex md:h-24 flex-col justify-center px-3 py-2 flex-1 text-xs sm:text-sm">
                           <div className="flex items-center gap-1">
-                                                 <FaMapMarkerAlt className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
+                            <FaMapMarkerAlt className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
                             <p className="font-semibold ">
                               {post.geoData.country || "Unknown Country"}
                             </p>
                           </div>
-                          {post.geoData.region && <p className=" text-[11px] sm:text-xs">{post.geoData.region}</p>}
-                          {post.geoData.city && <p className=" text-[11px] sm:text-xs">{post.geoData.city}</p>}
-                          {post.geoData.address && <p className=" text-[10px] sm:text-xs italic mt-1">{post.geoData.address}</p>}
-                          <p className="text-[10px] sm:text-[11px]  mt-1">
-                            🌐 Lat: {post.geoData.latitude?.toFixed(4)}, Lng: {post.geoData.longitude?.toFixed(4)}
+                          {post.geoData.region && (
+                            <p className="text-[11px] sm:text-xs">
+                              {post.geoData.region}
+                            </p>
+                          )}
+                          {post.geoData.city && (
+                            <p className="text-[11px] sm:text-xs">
+                              {post.geoData.city}
+                            </p>
+                          )}
+                          {post.geoData.address && (
+                            <p className="text-[10px] sm:text-xs italic mt-1">
+                              {post.geoData.address}
+                            </p>
+                          )}
+                          <p className="text-[10px] sm:text-[11px] mt-1">
+                            🌐 Lat: {post.geoData.latitude?.toFixed(4)},
+                            Lng: {post.geoData.longitude?.toFixed(4)}
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Caption/Description + Tags under photo */}
-                    <div className="px-2 ">
+                    {/* Caption & Tags */}
+                    <div className="px-2 mt-2">
                       {post.description && (
-                        <p className="text-xl font-bold text-gray-600">{post.description}</p>
+                        <p className="text-xl font-bold text-gray-600">
+                          {post.description}
+                        </p>
                       )}
                       {post.text && (
-                        <p className="text-sm text-gray-600 ">{post.text}</p>
+                        <p className="text-sm text-gray-600">{post.text}</p>
                       )}
                       {post.tags && post.tags.length > 0 && (
                         <p className="text-sm text-blue-600 flex flex-wrap gap-2 mb-1">
@@ -338,21 +482,25 @@ export default function PostList() {
                       )}
                     </div>
 
-                    {/* Action Bar same width */}
+                    {/* Action Bar */}
                     <div className="flex items-center justify-between bg-gray-600 px-4 py-2">
-                      <div className="flex gap-6 text-gray-300   text-lg">
+                      <div className="flex gap-6 text-gray-300 text-lg">
                         <div
                           onClick={() => navigate(`/comments/${post.id}`)}
                           className="flex items-center gap-1 cursor-pointer hover:text-blue-300"
                         >
                           <FaComment />
-                          <span className="text-sm">{getCommentCount(post.id)}</span>
+                          <span className="text-sm">
+                            {getCommentCount(post.id)}
+                          </span>
                         </div>
                         <div
                           onClick={() => toggleLike(post.id)}
                           className="flex items-center gap-1 cursor-pointer hover:text-red-300"
                         >
-                          <FaHeart className={`${liked ? "text-red-500" : ""}`} />
+                          <FaHeart
+                            className={`${liked ? "text-red-500" : ""}`}
+                          />
                           <span className="text-sm">{liked ? 1 : 0}</span>
                         </div>
                       </div>
