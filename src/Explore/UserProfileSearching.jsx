@@ -230,12 +230,7 @@ const UserProfileSearching = () => {
               {btnLoading ? "Loading..." : isFollowing ? "Following" : "Follow"}
             </button>
           )}
-          <button className="flex-1 bg-gray-200 text-sm font-semibold py-2 rounded-lg">
-            Message
-          </button>
-          <button className="flex-1 bg-gray-200 text-sm font-semibold py-2 rounded-lg">
-            Contact
-          </button>
+         
         </div>
 
         {/* Level/Badge */}
