@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import SuggestionsBar from "./Sugestionbar";
 import { getAuth, signOut } from "firebase/auth";
 import { db } from "../firebase/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import HorizontalTabs from "../Profile_Pages/Horizotal_tabs";
-import { FaStar, FaMedal } from "react-icons/fa";
+import { FaStar, FaMedal, FaPlus, FaCamera } from "react-icons/fa";
 
 // Level configuration (keep consistent with LevelCardFirestore)
 const LEVELS = [
@@ -18,9 +18,10 @@ const LEVELS = [
 
 const Profile = () => {
   const [user, setUser] = useState(null);
-  const [sticks, setSticks] = useState(null); // 👈 Firestore userSticks
+  const [sticks, setSticks] = useState(null);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
 
   // Fetch user document from /users
@@ -87,6 +88,64 @@ const Profile = () => {
     return () => cancelAnimationFrame(frame);
   }, [sticks]);
 
+  // Convert file to base64
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // Handle profile image update
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size should be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      
+      // Convert to base64
+      const base64Image = await convertToBase64(file);
+      
+      // Update user document in Firestore
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (currentUser) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          profileImage: base64Image,
+          updatedAt: new Date().toISOString()
+        });
+        
+        console.log('Profile image updated successfully');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to update profile image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Trigger file input
+  const triggerFileInput = () => {
+    document.getElementById('profile-image-input').click();
+  };
+
   if (loading || !user || !sticks) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-700">
@@ -105,18 +164,43 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center text-black pb-20 pt-20">
-      {/* ✅ Removed local Top Bar */}
-      {/* Everything now handled by ScrollNavbar globally */}
+      {/* Hidden file input */}
+      <input
+        id="profile-image-input"
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
 
       {/* Profile Header */}
       <div className="w-full max-w-md mx-auto pt-4 px-2">
         <div className="flex items-center justify-between">
-          {/* avatar */}
-          <img
-            src={user.profileImage || "/default-avatar.png"}
-            alt={user.username}
-            className="w-20 h-20 rounded-full object-cover"
-          />
+          {/* Avatar with upload functionality - keeping original styling */}
+          <div className="relative">
+            <img
+              src={user.profileImage || "/default-avatar.png"}
+              alt={user.username}
+              className="w-20 h-20 rounded-full object-cover cursor-pointer"
+              onClick={triggerFileInput}
+            />
+            
+            {/* Plus icon indicator */}
+            <div 
+              className="absolute -bottom-1 -right-1 w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white shadow-md cursor-pointer"
+              onClick={triggerFileInput}
+            >
+              <FaPlus className="text-white text-xs" />
+            </div>
+            
+            {/* Loading spinner overlay - only shows when uploading */}
+            {uploading && (
+              <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
+
           <div className="flex-1 flex justify-around ml-4">
             <div className="flex flex-col items-center">
               <span className="font-bold">{user.postCount || 0}</span>
@@ -133,7 +217,7 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* 🚀 Level/Badge Card */}
+        {/* Level/Badge Card */}
         <div className="bg-white shadow-md rounded-xl p-4 my-4 border">
           {/* Level Info */}
           <div className="flex items-center gap-3 mb-3">
