@@ -185,9 +185,7 @@ export default function SuggestionsBar() {
         <span className="font-semibold text-gray-800 text-base">
           Suggested for You
         </span>
-        <button className="text-blue-500 text-sm font-medium hover:underline">
-          See All
-        </button>
+        
       </div>
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
         {suggestions.map((user) => {
