@@ -26,6 +26,7 @@ import ScrollToTop from "./ScrollToTop";
 // ✅ Import the new pages
 import Updates from "./topbarUpdates/Updates";
 import Details from "./topbarUpdates/Details";
+import UserProfileSearching from "./Explore/UserProfileSearching";
 
 // Layout separates nav + main content
 const AppLayout = ({ isMobile }) => {
@@ -195,6 +196,15 @@ const AppLayout = ({ isMobile }) => {
               element={
                 <PrivateRoute>
                   <Details />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/search-user/:id"
+              element={
+                <PrivateRoute>
+                  <UserProfileSearching />
                 </PrivateRoute>
               }
             />

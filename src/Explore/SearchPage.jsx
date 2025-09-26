@@ -1,9 +1,9 @@
-// src/pages/SearchPage.js
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase/firebase";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaSearch, FaTimes, FaPaperPlane } from "react-icons/fa";
+import verifyTick from "../assets/Blue_tick.png"; // 🔹 Add this
 
 // Utility to fetch one user’s full details
 const getUserData = async (userId) => {
@@ -18,10 +18,12 @@ const getUserData = async (userId) => {
         username: data.username || data.name || "Unknown",
         displayName: data.displayName || data.name || "",
         bio: Array.isArray(data.bio) ? data.bio.join(" ") : data.bio || "",
-        verified: data.verified || false,
+        verified: data.userRole === "Department", // 🔹 Verified if Department
+        userRole: data.userRole || "user",
         photoURL:
           data.profileImage &&
-          (data.profileImage.startsWith("http") || data.profileImage.startsWith("data:"))
+          (data.profileImage.startsWith("http") ||
+            data.profileImage.startsWith("data:"))
             ? data.profileImage
             : data.profileImage
             ? `data:image/jpeg;base64,${data.profileImage}`
@@ -37,6 +39,7 @@ const getUserData = async (userId) => {
     displayName: "",
     bio: "",
     verified: false,
+    userRole: "user",
     photoURL: "/default-avatar.png",
   };
 };
@@ -89,14 +92,12 @@ export default function SearchPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 🔹 Taller Fancy Search Bar */}
+      {/* 🔹 Fancy Search Bar */}
       <div className="sticky top-0 z-50 flex items-center gap-4 px-4 py-4 border-b bg-white h-20">
-        {/* Back Button */}
         <button onClick={() => navigate(-1)} className="text-gray-700 text-2xl">
           <FaArrowLeft />
         </button>
-
-        {/* Larger Rounded Search Box */}
+        {/* Search Bar */}
         <div className="flex items-center bg-gray-100 border border-gray-300 rounded-full px-4 py-3 flex-1 h-12">
           <FaSearch className="text-gray-500 mr-2 text-lg" />
           <input
@@ -107,8 +108,6 @@ export default function SearchPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-transparent flex-1 outline-none text-base text-gray-800 placeholder-gray-400"
           />
-
-          {/* Clear button (X) when typing */}
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
@@ -118,8 +117,6 @@ export default function SearchPage() {
             </button>
           )}
         </div>
-
-        {/* Paper plane icon */}
         <button className="text-[#782048] text-2xl">
           <FaPaperPlane />
         </button>
@@ -153,7 +150,7 @@ export default function SearchPage() {
               <li
                 key={user.id}
                 className="flex items-center px-4 py-3 hover:bg-gray-50 transition cursor-pointer"
-                onClick={() => navigate(`/profile/${user.id}`)}
+                onClick={() => navigate(`/search-user/${user.id}`)}
               >
                 <img
                   src={user.photoURL}
@@ -166,7 +163,12 @@ export default function SearchPage() {
                       {user.username}
                     </span>
                     {user.verified && (
-                      <span className="text-blue-500 text-sm">✔️</span>
+                      <img
+                        src={verifyTick}
+                        alt="verified"
+                        className="w-4 h-4"
+                        title="Verified Department"
+                      />
                     )}
                   </div>
                   {user.displayName && (
