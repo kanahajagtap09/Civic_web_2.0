@@ -324,7 +324,7 @@ export default function PostList() {
     <>
       {isMobile && <ScrollNavbar />}
 
-      <div className="max-w-lg mx-auto mt-6 space-y-6">
+    <div className="max-w-lg mx-auto mt-6 space-y-6  min-h-screen rounded-xl p-3">
         <div id="first-section">
           <SuggestionsBar />
         </div>
@@ -340,7 +340,7 @@ export default function PostList() {
           return (
             <div
               key={post.id}
-              className="rounded-3xl overflow-hidden bg-[#eaf0ff] shadow-md border border-gray-200 "
+          className="rounded-3xl overflow-hidden  bg-gray-100 shadow-md border border-gray-200"
             >
               {/* Header */}
               <div className="flex items-start justify-between px-4 pt-3">

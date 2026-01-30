@@ -193,7 +193,7 @@ export default function SuggestionsBar() {
           return (
             <div
               key={user.uid}
-              className="flex flex-col items-center min-w-[140px] bg-[#eaf0ff] rounded-lg p-3 border border-gray-200 shadow-sm"
+              className="flex flex-col items-center min-w-[140px] bg-gray-100 rounded-lg p-3 border border-gray-200 shadow-sm"
             >
               <img
                 src={

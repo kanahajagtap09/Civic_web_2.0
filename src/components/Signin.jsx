@@ -70,7 +70,8 @@ const SignUp = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center relative">
       {/* Full Background Gradient */}
-      <div className="fixed inset-0 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-700"></div>
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-200 via-white to-blue-100"></div>
+
 
       <ToastContainer position="top-right" autoClose={3000} />
 
@@ -79,7 +80,7 @@ const SignUp = () => {
         {/* Logo Title */}
         <div className="text-center mb-6">
           <h1
-            className="text-4xl font-bold text-[#782048] tracking-wide"
+            className="text-4xl font-bold text-blue-500 tracking-wide"
             style={{ fontFamily: "'Cinzel','Times New Roman',serif" }}
           >
             CIVIC

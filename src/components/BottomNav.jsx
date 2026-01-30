@@ -37,36 +37,44 @@ const BottomNav = () => {
     {
       name: "Home",
       path: "/",
-      icon: <HomeIcon className="w-6 h-6" />,
-      iconActive: <HomeSolid className="w-6 h-6" />,
+      icon: <HomeIcon className="w-6 h-6 text-gray-500" />,
+      iconActive: <HomeSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
     },
     {
       name: "Explore",
       path: "/dashboard",
-      icon: <MagnifyingGlassIcon className="w-6 h-6" />,
-      iconActive: <MagnifyingGlassSolid className="w-6 h-6" />,
+      icon: <MagnifyingGlassIcon className="w-6 h-6 text-gray-500" />,
+      iconActive: <MagnifyingGlassSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
     },
     {
       name: "Championship",
       path: "/championship",
-      icon: <AcademicCapIcon className="w-6 h-6" />,
-      iconActive: <AcademicCapSolid className="w-6 h-6" />,
+      icon: <AcademicCapIcon className="w-6 h-6 text-gray-500" />,
+      iconActive: <AcademicCapSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
     },
     ...(user
       ? [
           {
             name: "Post",
             isCenter: true,
-            icon: <PlusCircleIcon className="w-9 h-9 text-white" />,
-            iconActive: <PlusCircleSolid className="w-9 h-9" />,
+            icon: (
+              <PlusCircleIcon
+                className="w-9 h-9 text-gray-500"
+              />
+            ),
+            iconActive: (
+              <PlusCircleSolid
+                className="w-9 h-9 text-[oklch(62.3%_0.214_259.815)]"
+              />
+            ),
           },
         ]
       : []),
     {
       name: "Notification",
       path: "/about",
-      icon: <BellIcon className="w-6 h-6" />,
-      iconActive: <BellSolid className="w-6 h-6" />,
+      icon: <BellIcon className="w-6 h-6 text-gray-500" />,
+      iconActive: <BellSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
     },
   ];
 
@@ -92,7 +100,7 @@ const BottomNav = () => {
           >
             {/* Active bar indicator */}
             <div
-              className="absolute top-0 h-1 rounded-full  transition-all duration-300 ease-out"
+              className="absolute top-0 h-1 rounded-full transition-all duration-300 ease-out bg-[oklch(62.3%_0.214_259.815)]"
               style={{
                 width: "3rem",
                 left: `${activeIndex * (100 / pathItems.length) + (100 / pathItems.length) / 2}%`,
@@ -103,7 +111,7 @@ const BottomNav = () => {
             {navItems.map((item, index) => {
               const isActive = location.pathname === item.path;
 
-              // Floating Action Button
+              // Floating Post Button
               if (item.isCenter) {
                 return (
                   <li
@@ -112,12 +120,12 @@ const BottomNav = () => {
                   >
                     <button
                       onClick={() => setIsModalOpen(true)}
-                      className="bg-[#782048]
-                        w-16 h-16 rounded-full border-4 border-white 
+                      className="w-16 h-16 rounded-full border-4 border-white 
                         flex items-center justify-center shadow-lg 
-                        transition-transform duration-300 hover:scale-110"
+                        transition-transform duration-300 hover:scale-110 
+                        bg-white/90 backdrop-blur-md border border-gray-200"
                     >
-                      {isActive ? item.iconActive : item.icon}
+                      <PlusCircleIcon className="w-9 h-9 text-gray-500" />
                     </button>
                   </li>
                 );
@@ -137,13 +145,13 @@ const BottomNav = () => {
                     <span
                       className={`transition-transform duration-300 transform 
                         group-hover:-translate-y-1 group-hover:scale-110
-                        ${isActive ? "text-[#782048]" : "text-gray-500"}`}
+                        ${isActive ? "text-[oklch(62.3%_0.214_259.815)]" : "text-gray-500"}`}
                     >
                       {isActive ? item.iconActive : item.icon}
                     </span>
                     <span
                       className={`text-[11px] mt-1 tracking-wide transition-all duration-300 
-                        ${isActive ? "text-[#782048]" : "text-gray-500 group-hover:text-blue-600"}`}
+                        ${isActive ? "text-[oklch(62.3%_0.214_259.815)]" : "text-gray-500 group-hover:text-[oklch(62.3%_0.214_259.815)]"}`}
                     >
                       {item.name}
                     </span>
