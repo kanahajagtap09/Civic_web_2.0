@@ -84,7 +84,6 @@ const ScrollNavbar = () => {
 
   const navItems = [
     { path: "/map", icon: MapIcon, iconSolid: MapIconSolid, label: "Map" },
-    { path: "/profile", icon: UserIcon, iconSolid: UserIconSolid, label: "Profile" },
   ];
   const isActive = (path) => location.pathname.startsWith(path);
 
@@ -147,7 +146,7 @@ const ScrollNavbar = () => {
               }}
             />
             <h1
-              className="relative font-serif text-xl sm:text-2xl tracking-wider font-bold transform group-hover:scale-105 transition-transform duration-200"
+              className="relative font-serif text-xl ml-12 sm:text-2xl tracking-wider font-bold transform group-hover:scale-105 transition-transform duration-200"
               style={{
                 color: blue,
                 fontFamily: "'Cinzel','Times New Roman',serif",

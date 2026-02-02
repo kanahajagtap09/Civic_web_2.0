@@ -11,7 +11,6 @@ import {
 } from "firebase/firestore";
 import { FaPlay } from "react-icons/fa";
 import PostModal from "../Explore/ExploreModel/Postmodel";
-import { useNavigate } from "react-router-dom";
 
 // ✅ Safe resolver
 const resolvePhotoURL = (val) => {
@@ -22,7 +21,8 @@ const resolvePhotoURL = (val) => {
 
 // ✅ User data fetch
 const getUserData = async (userId) => {
-  if (!userId) return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
+  if (!userId)
+    return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
   try {
     const snap = await getDoc(doc(db, "users", userId));
     if (snap.exists()) {
@@ -34,7 +34,7 @@ const getUserData = async (userId) => {
       };
     }
   } catch (err) {
-    console.error("error fetching user:", err);
+    console.error("Error fetching user:", err);
   }
   return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
 };
@@ -45,16 +45,15 @@ export default function Explore() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 697);
   const userCache = useRef({});
-  const navigate = useNavigate();
 
-  // Check if mobile on resize
+  // Check screen size
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 697);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Fetch posts with enriched data
+  // ✅ Fetch posts
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, async (snap) => {
@@ -84,24 +83,10 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Container with proper padding for navbars */}
-      <div className={`w-full ${isMobile ? 'pt-20 pb-24' : 'pt-24 pb-8'}`}>
-        
-        {/* Search Bar - Centered like nav */}
-        <div className="px-4 py-3 sticky top-16 sm:top-20 bg-white z-40 border-b">
-          <div className="max-w-md mx-auto">
-            <input
-              type="text"
-              placeholder="Search"
-              onFocus={() => navigate("/search")}
-              className="w-full text-sm px-4 py-2 rounded-full border border-gray-300 bg-gray-100 
-                focus:outline-none focus:ring-1 focus:ring-gray-400 cursor-pointer"
-              readOnly
-            />
-          </div>
-        </div>
+      {/* Container for content */}
+      <div className={`w-full ${isMobile ? "pt-20 pb-24" : "pt-24 pb-8"}`}>
+        {/* 🚫 The search bar is removed here */}
 
-        {/* Loading skeleton */}
         {loading ? (
           <div className="max-w-5xl mx-auto px-1">
             <div className="grid grid-cols-3 gap-px animate-pulse">
@@ -112,7 +97,7 @@ export default function Explore() {
           </div>
         ) : (
           <>
-            {/* Posts grid */}
+            {/* Posts Grid */}
             <div className="max-w-5xl mx-auto px-1">
               <div className="grid grid-cols-3 gap-px sm:gap-1">
                 {posts.map((post) =>
@@ -129,17 +114,19 @@ export default function Explore() {
                         loading="lazy"
                       />
 
-                      {/* Video icon if needed */}
-                      {post.type === 'video' && (
+                      {/* Video Indicator */}
+                      {post.type === "video" && (
                         <div className="absolute top-2 right-2 bg-black bg-opacity-50 p-1 rounded-full">
                           <FaPlay className="text-white text-xs" />
                         </div>
                       )}
 
                       {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 
+                      <div
+                        className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 
                         transition-all duration-300 flex items-center justify-center gap-4 
-                        text-white font-semibold opacity-0 group-hover:opacity-100">
+                        text-white font-semibold opacity-0 group-hover:opacity-100"
+                      >
                         <div className="flex items-center gap-1 text-sm">
                           <span>❤️</span>
                           <span>{post.likes?.length || 0}</span>
@@ -156,13 +143,13 @@ export default function Explore() {
             </div>
 
             {/* Empty state */}
-            {posts.filter(p => p.imageUrl).length === 0 && (
+            {posts.filter((p) => p.imageUrl).length === 0 && (
               <div className="text-center py-16">
                 <p className="text-gray-500">No posts to explore yet</p>
               </div>
             )}
 
-            {/* Modal */}
+            {/* Post Modal */}
             <PostModal
               open={!!selectedPost}
               handleClose={() => setSelectedPost(null)}

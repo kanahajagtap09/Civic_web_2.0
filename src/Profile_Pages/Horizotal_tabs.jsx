@@ -307,8 +307,8 @@ export default function HorizontalTabs() {
   return (
     <Box
       sx={{
-        width: '100%',
-        maxWidth: 480,
+        width: { xs: '100%', md: '80%' },
+        maxWidth: { xs: 480, md: 'none' },
         mx: 'auto',
         bgcolor: 'background.paper',
         borderRadius: 3,
@@ -362,7 +362,7 @@ export default function HorizontalTabs() {
 
       {/* All Posts */}
       <CustomTabPanel value={value} index={0}>
-        <Box sx={{ fontSize: 18, color: 'text.primary' }}>
+        <Box sx={{ fontSize: 18, color: 'text.primary', width: { xs: '100%', md: '80%' }, mx: 'auto' }}>
           <Allpostprofile />
         </Box>
       </CustomTabPanel>

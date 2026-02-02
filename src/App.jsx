@@ -57,7 +57,6 @@ const AppLayout = ({ isMobile }) => {
       <main
         className={`
           flex-1 
-          ${!isMobile && !hideNavs && user ? "ml-[240px]" : ""} 
           ${isMobile && !hideNavs && user ? "pb-14" : ""} 
           overflow-x-hidden
         `}

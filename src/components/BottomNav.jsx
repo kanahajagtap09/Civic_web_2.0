@@ -5,7 +5,12 @@ import {
   BellIcon,
   AcademicCapIcon,
   MagnifyingGlassIcon,
+  UserIcon,
+    UserIcon as UserSolid,
 } from "@heroicons/react/24/outline";
+
+
+
 
 import {
   HomeIcon as HomeSolid,
@@ -70,12 +75,12 @@ const BottomNav = () => {
           },
         ]
       : []),
-    {
-      name: "Notification",
-      path: "/about",
-      icon: <BellIcon className="w-6 h-6 text-gray-500" />,
-      iconActive: <BellSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
-    },
+ {
+  name: "Profile",
+  path: "/profile",
+  icon: <UserIcon className="w-6 h-6 text-gray-500" />,
+  iconActive: <UserSolid className="w-6 h-6 text-[oklch(62.3%_0.214_259.815)]" />,
+},
   ];
 
   // Only items with real paths for indicator tracking
