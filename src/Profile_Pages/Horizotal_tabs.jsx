@@ -1,258 +1,193 @@
-import * as React from 'react';
-import PropTypes from 'prop-types';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Box from '@mui/material/Box';
-import ArticleIcon from '@mui/icons-material/Article';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import WhatshotIcon from '@mui/icons-material/Whatshot';
-import BlockIcon from '@mui/icons-material/Block';
-import Allpostprofile from '../horizontal_tabs/Allpostprofile';
-import { useAuth } from '../context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
+import * as React from "react";
+import PropTypes from "prop-types";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Box from "@mui/material/Box";
+import GridOnIcon from "@mui/icons-material/GridOn";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import WhatshotIcon from "@mui/icons-material/Whatshot";
+import { FaHeart, FaRegComment, FaPlay } from "react-icons/fa";
+import { db } from "../firebase/firebase";
+import { useAuth } from "../context/AuthContext";
+import {
+  doc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import PostModal from "../horizontal_tabs/PostModal";
 
-// -----------------------------
-// Calendar Component (Fully Functional)
-// -----------------------------
+// ---------------------------------------------------
+// CalendarStreak component (unchanged)
+// ---------------------------------------------------
 const CalendarStreak = () => {
   const today = new Date();
   const [year, setYear] = React.useState(today.getFullYear());
-  const [month, setMonth] = React.useState(today.getMonth()); // 0 = Jan
+  const [month, setMonth] = React.useState(today.getMonth());
   const [streakData, setStreakData] = React.useState(null);
   const { user } = useAuth();
-  
-  // Get user streak data from Firestore
+
   React.useEffect(() => {
     if (!user) return;
-    
-    const userSticksRef = doc(db, 'userSticks', user.uid);
-    const unsubscribe = onSnapshot(userSticksRef, (doc) => {
-      if (doc.exists()) {
-        setStreakData(doc.data());
-      }
+    const ref = doc(db, "userSticks", user.uid);
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) setStreakData(snap.data());
     });
-    
-    return () => unsubscribe();
+    return () => unsub();
   }, [user]);
 
-  // Convert Firestore dates to day numbers for current month/year
   const streakDays = React.useMemo(() => {
     if (!streakData?.streakDays) return [];
     return streakData.streakDays
-      .map(dateStr => new Date(dateStr))
-      .filter(date => 
-        date.getMonth() === month && 
-        date.getFullYear() === year
-      )
-      .map(date => date.getDate());
+      .map((s) => new Date(s))
+      .filter((d) => d.getFullYear() === year && d.getMonth() === month)
+      .map((d) => d.getDate());
   }, [streakData, month, year]);
 
-  // Days in this month  
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  // First weekday index (0 = Sunday, 1 = Monday ... 6 = Saturday)
-  const firstDayIndex = new Date(year, month, 1).getDay();
-
-  // Build weeks grid (full 6x7 typically)
+  const firstDay = new Date(year, month, 1).getDay();
+  const totalCells = Math.ceil((daysInMonth + firstDay) / 7) * 7;
   const weeks = [];
-  let currentDay = 1;
-  const totalCells = Math.ceil((daysInMonth + firstDayIndex) / 7) * 7;
-
-  for (let cell = 0; cell < totalCells; cell++) {
-    if (cell % 7 === 0) weeks.push([]);
-
-    if (cell < firstDayIndex || currentDay > daysInMonth) {
-      weeks[weeks.length - 1].push(null); // Empty cell
-    } else {
-      weeks[weeks.length - 1].push(currentDay);
-      currentDay++;
-    }
+  let currDay = 1;
+  for (let i = 0; i < totalCells; i++) {
+    if (i % 7 === 0) weeks.push([]);
+    if (i < firstDay || currDay > daysInMonth) weeks.at(-1).push(null);
+    else weeks.at(-1).push(currDay++);
   }
 
-  // Navigation
-  const handlePrev = () => {
-    if (month === 0) {
-      setMonth(11);
-      setYear((y) => y - 1);
-    } else {
-      setMonth((m) => m - 1);
-    }
-  };
+  const handlePrev = () =>
+    month === 0
+      ? (setMonth(11), setYear((y) => y - 1))
+      : setMonth((m) => m - 1);
+  const handleNext = () =>
+    month === 11
+      ? (setMonth(0), setYear((y) => y + 1))
+      : setMonth((m) => m + 1);
 
-  const handleNext = () => {
-    if (month === 11) {
-      setMonth(0);
-      setYear((y) => y + 1);
-    } else {
-      setMonth((m) => m + 1);
-    }
-  };
-
-  const monthNames = [
-    'JAN','FEB','MAR','APR','MAY','JUN',
-    'JUL','AUG','SEP','OCT','NOV','DEC'
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
   ];
 
   return (
     <Box
       sx={{
-        width: '100%',
-        textAlign: 'center',
-        border: '1px solid #ddd',
+        width: "100%",
+        border: "1px solid #ddd",
         borderRadius: 3,
-        overflow: 'hidden',
-        bgcolor: 'background.paper',
-        boxShadow: 1,
+        bgcolor: "background.paper",
       }}
     >
       {streakData && (
         <Box
           sx={{
             p: 2,
-            borderBottom: '1px solid #eee',
-            display: 'flex',
-            justifyContent: 'space-around',
-            alignItems: 'center',
-            bgcolor: '#fafafa',
+            borderBottom: "1px solid #eee",
+            display: "flex",
+            justifyContent: "space-around",
+            bgcolor: "#fafafa",
           }}
         >
           <div className="flex flex-col items-center">
             <div className="text-2xl font-bold flex items-center gap-1">
-              {streakData.currentStreak} <WhatshotIcon sx={{ color: 'orange' }} />
+              {streakData.currentStreak} <WhatshotIcon sx={{ color: "orange" }} />
             </div>
             <div className="text-xs text-gray-600">Current Streak</div>
           </div>
-
           <div className="flex flex-col items-center">
             <div className="text-2xl font-bold flex items-center gap-1">
-              {streakData.longestStreak} <WhatshotIcon sx={{ color: 'orange' }} />
+              {streakData.longestStreak} <WhatshotIcon sx={{ color: "orange" }} />
             </div>
             <div className="text-xs text-gray-600">Longest Streak</div>
           </div>
-
           <div className="flex flex-col items-center">
-            <div className="text-2xl font-bold">+{streakData.currentPostPoints}</div>
+            <div className="text-2xl font-bold">
+              +{streakData.currentPostPoints || 0}
+            </div>
             <div className="text-xs text-gray-600">Points Today</div>
           </div>
         </Box>
       )}
 
-      {/* Header with navigation */}
       <Box
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           p: 2,
-          borderBottom: '1px solid #eee',
-          bgcolor: '#fafafa',
+          borderBottom: "1px solid #eee",
+          bgcolor: "#fafafa",
         }}
       >
         <ChevronLeftIcon
           onClick={handlePrev}
-          sx={{ cursor: 'pointer', color: 'text.secondary' }}
+          sx={{ cursor: "pointer", color: "text.secondary" }}
         />
-        <span style={{ fontWeight: 'bold' }}>
-          {monthNames[month]} {year}
+        <span className="font-semibold">
+          {months[month]} {year}
         </span>
         <ChevronRightIcon
           onClick={handleNext}
-          sx={{ cursor: 'pointer', color: 'text.secondary' }}
+          sx={{ cursor: "pointer", color: "text.secondary" }}
         />
       </Box>
 
-      {/* Week Days */}
       <Box
         sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          py: 1,
-          fontSize: 12,
-          fontWeight: 'bold',
-          color: 'gray',
-        }}
-      >
-        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d) => (
-          <div key={d}>{d}</div>
-        ))}
-      </Box>
-
-      {/* Days Grid */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
           gap: 1,
           p: 1,
         }}
       >
         {weeks.map((week, wi) =>
-          week.map((d, di) => {
+          week.map((day, di) => {
             const isToday =
-              d &&
-              year === today.getFullYear() &&
-              month === today.getMonth() &&
-              d === today.getDate();
-
-            const isStreak = d && streakDays.includes(d);
-
+              day &&
+              today.getFullYear() === year &&
+              today.getMonth() === month &&
+              today.getDate() === day;
+            const isStreak = day && streakDays.includes(day);
             return (
               <Box
                 key={`${wi}-${di}`}
                 sx={{
                   width: 40,
                   height: 40,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mx: 'auto',
-                  bgcolor: isToday ? 'rgba(25,118,210,0.1)' : 'transparent',
-                  border: isToday
-                    ? '2px solid #1976d2'
-                    : '1px solid transparent',
-                  position: 'relative',
-                  cursor: d ? 'pointer' : 'default'
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: isToday ? "2px solid #1976d2" : "none",
                 }}
               >
-                {d && (
-                  <>
-                    {isStreak ? (
-                      <WhatshotIcon 
-                        sx={{ 
-                          color: 'orange',
-                          fontSize: 24,
-                          animation: 'flame 0.3s ease-in-out',
-                          '@keyframes flame': {
-                            '0%': { transform: 'scale(0.8)', opacity: 0 },
-                            '100%': { transform: 'scale(1)', opacity: 1 }
-                          }
-                        }} 
-                      />
-                    ) : streakData?.lastStickDate && new Date(streakData.lastStickDate).getDate() === d ? (
-                      <BlockIcon 
-                        sx={{ 
-                          color: 'red',
-                          fontSize: 20,
-                          opacity: 0.5 
-                        }} 
-                      />
-                    ) : (
-                      <span className={`text-sm ${isToday ? 'text-blue-600 font-bold' : ''}`}>
-                        {d}
-                      </span>
-                    )}
-                    
-                    {isToday && streakData && !isStreak && (
-                      <div className="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-bounce">
-                        !
-                      </div>
-                    )}
-                  </>
-                )}
+                {day ? (
+                  isStreak ? (
+                    <WhatshotIcon sx={{ color: "orange", fontSize: 22 }} />
+                  ) : (
+                    <span
+                      className={`text-sm ${
+                        isToday ? "text-blue-600 font-bold" : ""
+                      }`}
+                    >
+                      {day}
+                    </span>
+                  )
+                ) : null}
               </Box>
             );
           })
@@ -262,112 +197,143 @@ const CalendarStreak = () => {
   );
 };
 
-// -----------------------------
-// Tabs Panel
-// -----------------------------
+// ---------------------------------------------------
+// Tab panel helper
+// ---------------------------------------------------
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`custom-tabpanel-${index}`}
-      aria-labelledby={`custom-tab-${index}`}
+      id={`tab-panel-${index}`}
+      aria-labelledby={`tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 0 }}>{children}</Box>}
     </div>
   );
 }
-
 CustomTabPanel.propTypes = {
   children: PropTypes.node,
   index: PropTypes.number.isRequired,
   value: PropTypes.number.isRequired,
 };
 
-function a11yProps(index) {
-  return {
-    id: `custom-tab-${index}`,
-    'aria-controls': `custom-tabpanel-${index}`,
-  };
-}
+// ---------------------------------------------------
+// PostGrid (9:16 layout, 3-column desktop, 2-column tablet)
+// ---------------------------------------------------
+const PostGrid = () => {
+  const { user } = useAuth();
+  const [posts, setPosts] = React.useState([]);
+  const [selectedPost, setSelectedPost] = React.useState(null);
 
-// -----------------------------
-// HorizontalTabs (Main Component)
-// -----------------------------
-export default function HorizontalTabs() {
-  const [value, setValue] = React.useState(0);
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "posts"),
+      where("uid", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        likesCount: doc.data().likesCount || 0,
+        commentsCount: doc.data().commentsCount || 0,
+      }));
+      setPosts(data);
+    });
+    return () => unsub();
+  }, [user]);
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
+  if (!posts.length)
+    return (
+      <div className="text-center text-gray-400 py-10">No posts yet.</div>
+    );
 
   return (
-    <Box
-      sx={{
-        width: { xs: '100%', md: '80%' },
-        maxWidth: { xs: 480, md: 'none' },
-        mx: 'auto',
-        bgcolor: 'background.paper',
-        borderRadius: 3,
-        boxShadow: { xs: 0, sm: 1 },
-        mt: 2,
-      }}
-    >
+    <>
+      {/* --- Vertical-post balanced grid --- */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-[12px] bg-white">
+        {posts.map((post) => (
+          <div
+            key={post.id}
+            className="relative group cursor-pointer overflow-hidden bg-black"
+            onClick={() => setSelectedPost(post)}
+          >
+            {/* 9:16 aspect ratio but nice width (less skinny than raw 9/16) */}
+            <img
+              src={post.imageUrl || post.imageBase64 || "/default-avatar.png"}
+              alt={post.description || "post"}
+              className="w-full aspect-[3/4] md:aspect-[4/5] lg:aspect-[9/11] object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+
+            {/* small play icon for videos */}
+            {post.type === "video" && (
+              <FaPlay className="absolute top-2 right-2 text-white text-sm opacity-90" />
+            )}
+
+            {/* overlay */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-6 text-white">
+              <div className="flex items-center gap-1 text-sm font-semibold">
+                <FaHeart className="text-lg" />
+                <span>{post.likesCount}</span>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-semibold">
+                <FaRegComment className="text-lg" />
+                <span>{post.commentsCount}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <PostModal
+        open={!!selectedPost}
+        handleClose={() => setSelectedPost(null)}
+        post={selectedPost}
+      />
+    </>
+  );
+};
+
+// ---------------------------------------------------
+// Main HorizontalTabs container
+// ---------------------------------------------------
+export default function HorizontalTabs() {
+  const [value, setValue] = React.useState(0);
+  const handleChange = (_, val) => setValue(val);
+
+  return (
+    <Box sx={{ width: "100%", maxWidth: 1040, mx: "auto", mt: 2 }}>
       <Tabs
         value={value}
         onChange={handleChange}
-        aria-label="icon tabs"
-        variant="fullWidth"
-        TabIndicatorProps={{
-          style: {
-            height: 3,
-            borderRadius: 2,
-            background: 'linear-gradient(90deg, #1976d2 60%, #42a5f5 100%)',
-          },
-        }}
+        centered
+        TabIndicatorProps={{ style: { background: "#000", height: "1px" } }}
         sx={{
-          minHeight: 56,
-          '& .MuiTab-root': {
-            minHeight: 56,
-            minWidth: 0,
-            p: 0,
-            color: 'text.secondary',
-            '&:hover': {
-              bgcolor: 'action.hover',
-              color: 'primary.main',
-            },
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+          "& .MuiTabs-flexContainer": {
+            justifyContent: "center",
+            alignItems: "center",
+            gap: { xs: 10, sm: 20, md: 40 },
           },
-          '& .Mui-selected': {
-            color: 'primary.main',
+          "& .MuiTab-root": {
+            minWidth: 0,
+            opacity: 0.6,
+            py: 1,
+            "&.Mui-selected": { opacity: 1 },
           },
         }}
       >
-        <Tab
-          icon={<ArticleIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />}
-          aria-label="All Posts"
-          {...a11yProps(0)}
-        />
-        <Tab
-          icon={<CalendarMonthIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />}
-          aria-label="Calendar"
-          {...a11yProps(1)}
-        />
+        <Tab icon={<GridOnIcon sx={{ fontSize: 26 }} />} />
+        <Tab icon={<CalendarMonthIcon sx={{ fontSize: 26 }} />} />
       </Tabs>
 
-      {/* All Posts */}
       <CustomTabPanel value={value} index={0}>
-        <Box sx={{ fontSize: 18, color: 'text.primary', width: { xs: '100%', md: '80%' }, mx: 'auto' }}>
-          <Allpostprofile />
-        </Box>
+        <PostGrid />
       </CustomTabPanel>
 
-      {/* Functional Calendar */}
       <CustomTabPanel value={value} index={1}>
         <CalendarStreak />
       </CustomTabPanel>

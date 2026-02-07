@@ -2,21 +2,25 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { auth, db } from "../firebase/firebase";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
 import { signOut } from "firebase/auth";
-
 import {
   BiHomeAlt2,
   BiSearch,
   BiPlusCircle,
-  BiMenu
+  BiMenu,
 } from "react-icons/bi";
 import { MdOutlineExplore } from "react-icons/md";
 import { FiMapPin } from "react-icons/fi";
 import { AcademicCapIcon } from "@heroicons/react/24/outline";
 import { AcademicCapIcon as AcademicCapIconSolid } from "@heroicons/react/24/solid";
 import { FaTimes, FaSearch } from "react-icons/fa";
-
 import verifyTick from "../assets/Blue_tick.png";
 import PostCreatorModal from "./PostCreatorModal";
 
@@ -24,9 +28,9 @@ import PostCreatorModal from "./PostCreatorModal";
 const getUserData = async (userId) => {
   try {
     const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const data = userSnap.data();
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      const data = snap.data();
       return {
         id: userId,
         username: data.username || data.name || "Unknown",
@@ -41,20 +45,19 @@ const getUserData = async (userId) => {
             ? data.profileImage
             : data.profileImage
             ? `data:image/jpeg;base64,${data.profileImage}`
-            : "/default-avatar.png"
+            : "/default-avatar.png",
       };
     }
   } catch (err) {
-    console.error("Error fetching user data:", err);
+    console.error("getUserData error:", err);
   }
-
   return {
     username: "Unknown",
     displayName: "",
     bio: "",
     verified: false,
     userRole: "user",
-    photoURL: "/default-avatar.png"
+    photoURL: "/default-avatar.png",
   };
 };
 
@@ -68,11 +71,21 @@ const Navbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [realtimeUser, setRealtimeUser] = useState(null);
 
-  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchUsers, setSearchUsers] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
+
+  /* ---------- 🔁 Listen for latest user image ---------- */
+  useEffect(() => {
+    if (user?.uid) {
+      const off = onSnapshot(doc(db, "users", user.uid), (snap) => {
+        if (snap.exists()) setRealtimeUser(snap.data());
+      });
+      return () => off();
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -81,23 +94,25 @@ const Navbar = () => {
 
   if (loading) return null;
 
-  const profileImage =
-    user?.photoURL || firestoreUser?.profileImage || "/default-profile.png";
+  const currentProfileImage =
+    realtimeUser?.profileImage ||
+    firestoreUser?.profileImage ||
+    user?.photoURL ||
+    "/default-profile.png";
 
+  // ---- nav interaction helpers ----
   const handleNavClick = () => setHovered(false);
-
   const handleSearchClick = () => {
     setShowSearch(true);
     setHovered(true);
   };
-
   const handleBackClick = () => {
     setShowSearch(false);
     setSearchQuery("");
     setSearchUsers([]);
   };
 
-  /* ------------------ Debounced Firestore Search ------------------ */
+  /* ------------- Debounced Firestore Search ------------- */
   useEffect(() => {
     let active = true;
 
@@ -109,18 +124,19 @@ const Navbar = () => {
       setLoadingSearch(true);
       try {
         const snap = await getDocs(collection(db, "users"));
-        const allUsers = await Promise.all(
-          snap.docs.map(async (docSnap) => await getUserData(docSnap.id))
+        const all = await Promise.all(
+          snap.docs.map((docSnap) => getUserData(docSnap.id))
         );
         if (active) {
-          const filtered = allUsers.filter((u) =>
-            [u.username, u.displayName, u.bio]
-              .filter(Boolean)
-              .some((field) =>
-                field.toLowerCase().includes(searchQuery.toLowerCase())
-              )
+          setSearchUsers(
+            all.filter((u) =>
+              [u.username, u.displayName, u.bio]
+                .filter(Boolean)
+                .some((field) =>
+                  field.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+            )
           );
-          setSearchUsers(filtered);
         }
       } catch (err) {
         console.error("Error loading users:", err);
@@ -128,35 +144,35 @@ const Navbar = () => {
       setLoadingSearch(false);
     };
 
-    const timeout = setTimeout(fetchUsers, 400);
+    const t = setTimeout(fetchUsers, 400);
     return () => {
       active = false;
-      clearTimeout(timeout);
+      clearTimeout(t);
     };
   }, [searchQuery]);
 
-  /* ------------------ MAIN JSX ------------------ */
+  /* ---------------- JSX ---------------- */
   return (
     <>
       <nav
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => !showSearch && setHovered(false)}
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out z-50 shadow-lg ${
+        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto transition-all duration-300 ease-in-out z-50 shadow-lg ${
           hovered
             ? showSearch
-              ? "w-[360px]" // ✅ Wider when search active
+              ? "w-[360px]"
               : "w-[260px]"
             : "w-[64px]"
         }`}
       >
-        {/* Logo section */}
+        {/* Logo */}
         <Link
           to="/"
           onClick={handleNavClick}
           className="mb-8 pl-2 flex items-center justify-center"
         >
           <h1
-            className={`text-2xl font-bold cursor-pointer transition-opacity duration-200 ${
+            className={`text-2xl font-bold transition-opacity ${
               hovered ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -165,112 +181,17 @@ const Navbar = () => {
           {!hovered && <div className="w-6 h-6 bg-blue-500 rounded-full"></div>}
         </Link>
 
-        {/* ------------------ Search Panel ------------------ */}
+        {/* --- Search panel or Nav icons --- */}
         {showSearch && hovered ? (
-          <div className="flex flex-col h-full px-1">
-            {/* Header */}
-            <div className="flex items-center mb-4">
-              <button
-                onClick={handleBackClick}
-                className="flex items-center p-3 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FaTimes className="text-gray-600 mr-2" />
-                <span className="text-gray-700 font-medium">Close</span>
-              </button>
-            </div>
-
-            {/* Search Bar */}
-            <div className="flex items-center bg-gray-100 border border-gray-300 rounded-full px-3 py-2 mb-4">
-              <FaSearch className="text-gray-500 mr-2" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
-                autoFocus
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <FaTimes />
-                </button>
-              )}
-            </div>
-
-            {/* Search Results */}
-            <div className="flex-1 overflow-y-auto">
-              {searchQuery.trim() === "" ? (
-                <div className="text-gray-400 text-sm text-center p-3">
-                  Start typing to search users 🔍
-                </div>
-              ) : loadingSearch ? (
-                <ul>
-                  {[...Array(5)].map((_, i) => (
-                    <li key={i} className="flex items-center px-3 py-2 animate-pulse">
-                      <div className="w-10 h-10 rounded-full bg-gray-200" />
-                      <div className="ml-3 flex-1 min-w-0">
-                        <div className="h-3 bg-gray-200 rounded w-24 mb-1" />
-                        <div className="h-2 bg-gray-100 rounded w-16" />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : searchUsers.length === 0 ? (
-                <div className="text-center py-4 text-gray-500 text-sm">
-                  No users found for <span className="font-semibold">"{searchQuery}"</span> 💨
-                </div>
-              ) : (
-                <ul>
-                  {searchUsers.map((user) => (
-                    <li
-                      key={user.id}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg"
-                      onClick={() => {
-                        navigate(`/search-user/${user.id}`);
-                        handleBackClick();
-                      }}
-                    >
-                      <img
-                        src={user.photoURL}
-                        alt={user.username}
-                        className="w-10 h-10 rounded-full object-cover border border-gray-300"
-                      />
-                      <div className="ml-3 flex flex-col min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="font-semibold text-sm text-gray-900 truncate">
-                            {user.username}
-                          </span>
-                          {user.verified && (
-                            <img
-                              src={verifyTick}
-                              alt="verified"
-                              className="w-3 h-3"
-                              title="Verified Department"
-                            />
-                          )}
-                        </div>
-                        {user.displayName && (
-                          <span className="text-xs text-gray-600 truncate">
-                            {user.displayName}
-                          </span>
-                        )}
-                        {user.bio && (
-                          <span className="text-xs text-gray-400 truncate">
-                            {user.bio}
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+          <SearchPanel
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            handleBackClick={handleBackClick}
+            searchUsers={searchUsers}
+            loadingSearch={loadingSearch}
+            navigate={navigate}
+          />
         ) : (
-          /* ------------------ Standard Nav ------------------ */
           <div className="flex flex-col flex-grow space-y-1 relative pb-6">
             <NavItem
               to="/"
@@ -280,14 +201,12 @@ const Navbar = () => {
               visible={hovered}
               onClick={handleNavClick}
             />
-
             <NavButton
               onClick={handleSearchClick}
               icon={<BiSearch size={24} />}
               text="Search"
               visible={hovered}
             />
-
             <NavItem
               to="/explore"
               icon={<MdOutlineExplore size={24} />}
@@ -296,7 +215,6 @@ const Navbar = () => {
               visible={hovered}
               onClick={handleNavClick}
             />
-
             <NavItem
               to="/championship"
               icon={
@@ -311,7 +229,6 @@ const Navbar = () => {
               visible={hovered}
               onClick={handleNavClick}
             />
-
             {user && (
               <NavButton
                 onClick={() => setIsModalOpen(true)}
@@ -320,7 +237,6 @@ const Navbar = () => {
                 visible={hovered}
               />
             )}
-
             <div className="pt-2">
               <NavItem
                 to="/map"
@@ -332,15 +248,21 @@ const Navbar = () => {
               />
             </div>
 
+            {/* --- Profile section bottom --- */}
             {user ? (
               <div className="mt-auto">
                 <NavItem
                   to="/profile"
                   icon={
                     <img
-                      src={profileImage}
+                      src={
+                        currentProfileImage.startsWith("data:") ||
+                        currentProfileImage.startsWith("http")
+                          ? currentProfileImage
+                          : `data:image/jpeg;base64,${currentProfileImage}`
+                      }
                       alt={user.displayName ?? "User"}
-                      className="w-6 h-6 rounded-full object-cover"
+                      className="w-6 h-6 rounded-full object-cover border border-gray-300"
                     />
                   }
                   text="Profile"
@@ -351,7 +273,7 @@ const Navbar = () => {
                 {hovered && (
                   <button
                     onClick={handleLogout}
-                    className="w-full mt-2 text-sm text-red-500 hover:text-red-600 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="w-full mt-2 text-sm text-red-500 hover:text-red-600 py-2 px-4 rounded-lg hover:bg-gray-100"
                   >
                     Logout
                   </button>
@@ -362,15 +284,13 @@ const Navbar = () => {
                 <div className="mt-auto space-y-2">
                   <Link
                     to="/login"
-                    onClick={handleNavClick}
-                    className="block w-full text-center py-2 px-4 text-blue-500 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="block text-center py-2 px-4 text-blue-500 hover:bg-gray-100 rounded-lg"
                   >
                     Login
                   </Link>
                   <Link
                     to="/signup"
-                    onClick={handleNavClick}
-                    className="block w-full text-center py-2 px-4 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors"
+                    className="block text-center py-2 px-4 bg-blue-500 text-white hover:bg-blue-600 rounded-lg"
                   >
                     Sign Up
                   </Link>
@@ -380,7 +300,7 @@ const Navbar = () => {
 
             <button
               onClick={() => setShowMore(!showMore)}
-              className={`flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors ${
+              className={`flex items-center p-3 rounded-lg hover:bg-gray-100 ${
                 showMore ? "bg-gray-100" : ""
               }`}
             >
@@ -410,12 +330,15 @@ const Navbar = () => {
         )}
       </nav>
 
-      <PostCreatorModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <PostCreatorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </>
   );
 };
 
-/* ------------------ Helpers ------------------ */
+/* ------- Helpers ------- */
 const NavItem = ({ to, icon, text, active, visible, onClick }) => (
   <Link
     to={to}
@@ -432,11 +355,94 @@ const NavItem = ({ to, icon, text, active, visible, onClick }) => (
 const NavButton = ({ onClick, icon, text, visible }) => (
   <button
     onClick={onClick}
-    className="flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors w-full text-left"
+    className="flex items-center p-3 rounded-lg hover:bg-gray-100 w-full text-left"
   >
     <span className="mr-4 flex-shrink-0">{icon}</span>
     {visible && <span>{text}</span>}
   </button>
+);
+
+/* --- Extracted search panel for clarity --- */
+const SearchPanel = ({
+  searchQuery,
+  setSearchQuery,
+  handleBackClick,
+  searchUsers,
+  loadingSearch,
+  navigate,
+}) => (
+  <div className="flex flex-col h-full px-1">
+    <div className="flex items-center mb-4">
+      <button
+        onClick={handleBackClick}
+        className="flex items-center p-3 hover:bg-gray-100 rounded-lg"
+      >
+        <FaTimes className="text-gray-600 mr-2" />
+        <span className="text-gray-700 font-medium">Close</span>
+      </button>
+    </div>
+    <div className="flex items-center bg-gray-100 border rounded-full px-3 py-2 mb-4">
+      <FaSearch className="text-gray-500 mr-2" />
+      <input
+        type="text"
+        placeholder="Search users..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="bg-transparent flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
+        autoFocus
+      />
+      {searchQuery && (
+        <button
+          onClick={() => setSearchQuery("")}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <FaTimes />
+        </button>
+      )}
+    </div>
+    <div className="flex-1 overflow-y-auto">
+      {/* results */}
+      {searchQuery.trim() === "" ? (
+        <p className="text-gray-400 text-sm text-center p-3">
+          Start typing to search users 🔍
+        </p>
+      ) : loadingSearch ? (
+        <p className="p-3 text-gray-500 text-sm">Searching...</p>
+      ) : searchUsers.length === 0 ? (
+        <div className="text-center py-4 text-gray-500 text-sm">
+          No users found for <span className="font-semibold">"{searchQuery}"</span>
+        </div>
+      ) : (
+        <ul>
+          {searchUsers.map((u) => (
+            <li
+              key={u.id}
+              onClick={() => {
+                navigate(`/search-user/${u.id}`);
+                handleBackClick();
+              }}
+              className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg"
+            >
+              <img
+                src={u.photoURL}
+                alt={u.username}
+                className="w-10 h-10 rounded-full object-cover border"
+              />
+              <div className="ml-3 flex flex-col">
+                <span className="font-semibold text-sm">{u.username}</span>
+                {u.displayName && (
+                  <span className="text-xs text-gray-500">{u.displayName}</span>
+                )}
+                {u.bio && (
+                  <span className="text-xs text-gray-400 truncate">{u.bio}</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
 );
 
 export default Navbar;

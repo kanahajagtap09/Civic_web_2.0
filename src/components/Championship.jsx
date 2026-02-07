@@ -8,7 +8,7 @@ import {
   limit,
   getDocs,
 } from "firebase/firestore";
-import { FaTrophy, FaSearch, FaPlus } from "react-icons/fa";
+import { FaTrophy,  } from "react-icons/fa";
 
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState([]);
@@ -72,9 +72,9 @@ export default function Leaderboard() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="flex justify-between items-center px-5 pt-6 pb-4 border-b border-gray-200 bg-white sticky top-0 z-10">
-        <FaSearch className="text-gray-500 text-lg cursor-pointer" />
+       
         <h1 className="font-bold text-xl text-gray-900">Leaderboard</h1>
-        <FaPlus className="text-gray-500 text-lg cursor-pointer" />
+        
       </div>
 
       <div className="max-w-md mx-auto p-4 pt-6">

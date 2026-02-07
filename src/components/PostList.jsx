@@ -484,7 +484,7 @@ export default function PostList() {
                     </div>
                     <div className="flex gap-4 text-lg">
                       <FaPaperPlane className="cursor-pointer hover:text-green-400" />
-                      <FaBookmark className="cursor-pointer hover:text-yellow-400" />
+                      
                     </div>
                   </div>
                 </div>
