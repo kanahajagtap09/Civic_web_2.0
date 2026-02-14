@@ -22,7 +22,6 @@ import {
   FaHeart,
   FaComment,
   FaPaperPlane,
-  FaBookmark,
   FaSpinner,
   FaMapMarkerAlt,
   FaExclamationTriangle,
@@ -36,416 +35,288 @@ import geotagphoto from "../assets/geotagMapphoto.webp";
 import ScrollNavbar from "./ScrollNavbar";
 import verifyTick from "../assets/Blue_tick.png";
 
-// ----------------- Safe Photo Resolver -----------------
+/* ---------------- Resolve ----------------- */
 const resolvePhotoURL = (val) => {
-  if (typeof val !== "string" || !val.trim()) {
-    return "/default-avatar.png";
-  }
-  if (val.startsWith("http") || val.startsWith("data:")) {
-    return val;
-  }
+  if (typeof val !== "string" || !val.trim()) return "/default-avatar.png";
+  if (val.startsWith("http") || val.startsWith("data:")) return val;
   return `data:image/jpeg;base64,${val}`;
 };
 
-// ----------------- User data helper -----------------
+/* ---------------- getUserData ---------------- */
 const getUserData = async (userId) => {
-  if (!userId) {
-    return {
-      id: "unknown",
-      username: "Unknown",
-      photoURL: "/default-avatar.png",
-      userRole: "user",
-    };
-  }
+  if (!userId) return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
   try {
     const uRef = doc(db, "users", userId);
     const snap = await getDoc(uRef);
     if (snap.exists()) {
-      const data = snap.data();
+      const d = snap.data();
       return {
         id: userId,
-        username: data.username || data.name || "Unknown",
-        photoURL: resolvePhotoURL(data.profileImage),
-        userRole: data.userRole || "user",
+        username: d.username || d.name || "Unknown",
+        photoURL: resolvePhotoURL(d.profileImage),
+        userRole: d.userRole || "user",
       };
     }
   } catch (err) {
     console.error("user fetch error:", err);
   }
-  return {
-    id: "unknown",
-    username: "Unknown",
-    photoURL: "/default-avatar.png",
-    userRole: "user",
-  };
+  return { id: "unknown", username: "Unknown", photoURL: "/default-avatar.png" };
 };
 
-// ----------------- Enhanced Status Badge Renderer -----------------
+/* ---------------- Status Badge ---------------- */
 const StatusBadge = ({ status }) => {
-  const getStatusConfig = (status) => {
-    const normalizedStatus = status?.toLowerCase();
-    switch (normalizedStatus) {
-      case "pending":
-        return {
-          icon: <FaExclamationTriangle className="w-3 h-3" />,
-          text: "Pending",
-          gradient: "from-red-400 via-red-500 to-red-600",
-          textColor: "text-white",
-          borderColor: "border-indigo-300",
-          shadowColor: "shadow-indigo-500/30",
-          pulseColor: "animate-pulse",
-        };
-      case "assign":
-        return {
-          icon: <FaUserTie className="w-3 h-3" />,
-          text: "Assigned",
-          gradient: "from-amber-400 via-black to-black",
-          textColor: "text-black",
-          borderColor: "border-yellow-300",
-          shadowColor: "shadow-yellow-500/40",
-          pulseColor: "",
-        };
-      case "at progress":
-        return {
-          icon: <FaProgress className="w-3 h-3 animate-spin" />,
-          text: "In Progress",
-          gradient: "from-blue-500 via-blue-600 to-indigo-600",
-          textColor: "text-white",
-          borderColor: "border-blue-300",
-          shadowColor: "shadow-blue-500/40",
-          pulseColor: "",
-        };
-      case "resolved":
-        return {
-          icon: <FaCheckCircle className="w-3 h-3" />,
-          text: "Resolved",
-          gradient: "from-emerald-500 via-green-600 to-green-700",
-          textColor: "text-white",
-          borderColor: "border-green-300",
-          shadowColor: "shadow-green-500/40",
-          pulseColor: "",
-        };
-      default:
-        return {
-          icon: <FaExclamationTriangle className="w-3 h-3" />,
-          text: status || "Unknown",
-          gradient: "from-gray-400 to-gray-500",
-          textColor: "text-white",
-          borderColor: "border-gray-300",
-          shadowColor: "shadow-gray-500/30",
-          pulseColor: "",
-        };
-    }
-  };
+  const s = status?.toLowerCase();
+  const base = {
+    pending: { text: "Pending", gradient: "from-red-500 to-red-700", icon: <FaExclamationTriangle className="w-3 h-3" /> },
+    assign: { text: "Assigned", gradient: "from-amber-400 to-yellow-600", icon: <FaUserTie className="w-3 h-3" /> },
+    "at progress": { text: "In Progress", gradient: "from-blue-500 to-indigo-600", icon: <FaProgress className="w-3 h-3 animate-spin" /> },
+    resolved: { text: "Resolved", gradient: "from-green-500 to-emerald-700", icon: <FaCheckCircle className="w-3 h-3" /> },
+  }[s] || { text: status || "Unknown", gradient: "from-gray-400 to-gray-500", icon: <FaExclamationTriangle className="w-3 h-3" /> };
 
-  const config = getStatusConfig(status);
   return (
-    <div
-      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full 
-        bg-gradient-to-r ${config.gradient} ${config.textColor} 
-        ${config.borderColor} border ${config.shadowColor} shadow-md 
-        backdrop-blur-sm ${config.pulseColor} transform transition-all 
-        duration-300 hover:scale-105 hover:shadow-lg`}
-    >
-      {config.icon}
-      <span className="text-[10px] font-semibold uppercase tracking-wide">
-        {config.text}
-      </span>
+    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r ${base.gradient} text-white text-[10px] font-semibold`}>
+      {base.icon}
+      {base.text}
     </div>
   );
 };
 
-// ----------------- Main PostList --------------------
-export default function PostList() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+/* ---------------- Main ---------------- */
+export default function PostList({ posts: propPosts }) {
+  const [fetchedPosts, setFetchedPosts] = useState([]);
+  const [loading, setLoading] = useState(!propPosts);
   const [followingIds, setFollowingIds] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  const posts = propPosts || fetchedPosts;
   const userCache = useRef({});
-  const [likes, setLikes] = useState(() =>
-    JSON.parse(localStorage.getItem("likes") || "{}")
-  );
   const [loadingStates, setLoadingStates] = useState({});
   const navigate = useNavigate();
   const auth = getAuth();
 
-  // Responsive
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => localStorage.setItem("likes", JSON.stringify(likes)), [likes]);
-
-  const getCommentCount = (pid) => {
-    const stored = localStorage.getItem(`comments_${pid}`);
-    return stored ? JSON.parse(stored).length : 0;
-  };
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) setCurrentUserId(user.uid);
-      else setCurrentUserId(null);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setCurrentUserId(u ? u.uid : null);
       setAuthChecked(true);
     });
     return () => unsubscribe();
   }, [auth]);
 
   useEffect(() => {
-    if (!currentUserId) {
-      setFollowingIds([]);
-      return;
-    }
-    const fetchFollowing = async () => {
-      const followingCol = collection(db, "users", currentUserId, "following");
-      const snap = await getDocs(followingCol);
+    if (!currentUserId) return setFollowingIds([]);
+    (async () => {
+      const snap = await getDocs(collection(db, "users", currentUserId, "following"));
       setFollowingIds(snap.docs.map((d) => d.id));
-    };
-    fetchFollowing();
+    })();
   }, [currentUserId]);
 
   useEffect(() => {
+    if (propPosts) {
+      setLoading(false);
+      return;
+    }
     if (!currentUserId) return;
     setLoading(true);
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, async (snap) => {
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const enriched = await Promise.all(
+      const filled = await Promise.all(
         docs.map(async (p) => {
-          const userId = p.userId || p.uid;
-          if (!userCache.current[userId]) {
-            userCache.current[userId] = await getUserData(userId);
-          }
-          return {
-            ...p,
-            user: userCache.current[userId],
-            imageUrl: p.imageUrl || p.image || null,
-            description: p.description || "",
-            tags: p.tags || [],
-          };
+          const uid = p.userId || p.uid;
+          if (!userCache.current[uid]) userCache.current[uid] = await getUserData(uid);
+          return { ...p, user: userCache.current[uid], imageUrl: p.imageUrl || p.image || null };
         })
       );
-      setPosts(enriched);
+      setFetchedPosts(filled);
       setLoading(false);
     });
     return () => unsub();
-  }, [currentUserId]);
+  }, [currentUserId, propPosts]);
 
-  const toggleLike = (pid) =>
-    setLikes((prev) => ({ ...prev, [pid]: !prev[pid] }));
-
-  const handleFollowToggle = async (userId) => {
-    if (!currentUserId || !userId) return;
-    setLoadingStates((prev) => ({ ...prev, [userId]: true }));
-
-    const userRef = doc(db, "users", currentUserId);
-    const theirUserRef = doc(db, "users", userId);
-    const myFollowingDoc = doc(db, "users", currentUserId, "following", userId);
-    const theirFollowersDoc = doc(
-      db,
-      "users",
-      userId,
-      "followers",
-      currentUserId
-    );
-    const isFollowing = followingIds.includes(userId);
-
+  const toggleLike = async (post) => {
+    if (!currentUserId) return;
+    const ref = doc(db, "posts", post.id);
+    const liked = post.likes?.includes(currentUserId);
     try {
-      const batch = writeBatch(db);
-      if (isFollowing) {
-        batch.update(userRef, {
-          following: arrayRemove(userId),
-          followingCount: increment(-1),
-        });
-        batch.delete(myFollowingDoc);
-        batch.delete(theirFollowersDoc);
-        await batch.commit();
-        await updateDoc(theirUserRef, { followersCount: increment(-1) }).catch(
-          () => setDoc(theirUserRef, { followersCount: 0 }, { merge: true })
-        );
-        setFollowingIds((prev) => prev.filter((id) => id !== userId));
-      } else {
-        batch.update(userRef, {
-          following: arrayUnion(userId),
-          followingCount: increment(1),
-        });
-        batch.set(myFollowingDoc, { followedAt: serverTimestamp() });
-        batch.set(theirFollowersDoc, { followedAt: serverTimestamp() });
-        await batch.commit();
-        await updateDoc(theirUserRef, { followersCount: increment(1) }).catch(
-          () => setDoc(theirUserRef, { followersCount: 1 }, { merge: true })
-        );
-        setFollowingIds((prev) => [...prev, userId]);
-      }
-    } catch (error) {
-      console.error("Error updating follow/unfollow:", error);
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [userId]: false }));
+      if (liked) await updateDoc(ref, { likes: arrayRemove(currentUserId) });
+      else await updateDoc(ref, { likes: arrayUnion(currentUserId) });
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  if (!authChecked)
-    return <p className="text-center py-6">Checking authentication...</p>;
+  const handleFollowToggle = async (uid) => {
+    if (!currentUserId || !uid) return;
+    setLoadingStates((p) => ({ ...p, [uid]: true }));
+
+    const mine = doc(db, "users", currentUserId);
+    const them = doc(db, "users", uid);
+    const myF = doc(db, "users", currentUserId, "following", uid);
+    const theirF = doc(db, "users", uid, "followers", currentUserId);
+    const isF = followingIds.includes(uid);
+
+    try {
+      const batch = writeBatch(db);
+      if (isF) {
+        batch.update(mine, { following: arrayRemove(uid), followingCount: increment(-1) });
+        batch.delete(myF);
+        batch.delete(theirF);
+        await batch.commit();
+        await updateDoc(them, { followersCount: increment(-1) });
+        setFollowingIds((p) => p.filter((i) => i !== uid));
+      } else {
+        batch.update(mine, { following: arrayUnion(uid), followingCount: increment(1) });
+        batch.set(myF, { followedAt: serverTimestamp() });
+        batch.set(theirF, { followedAt: serverTimestamp() });
+        await batch.commit();
+        await updateDoc(them, { followersCount: increment(1) });
+        setFollowingIds((p) => [...p, uid]);
+      }
+    } finally {
+      setLoadingStates((p) => ({ ...p, [uid]: false }));
+    }
+  };
+
+  if (!authChecked) return <p className="text-center py-6">Checking authentication…</p>;
   if (!currentUserId)
-    return (
-      <div className="text-center py-6">
-        <p className="text-gray-600">🚀 Please log in to see posts.</p>
-      </div>
-    );
-  if (loading) return <p className="text-center py-6">Loading feed...</p>;
+    return <div className="text-center py-6 text-gray-600">🚀 Please log in to see posts.</div>;
+  if (loading) return <p className="text-center py-6">Loading feed…</p>;
 
   return (
     <>
-      {isMobile && <ScrollNavbar />}
+      {isMobile && !propPosts && <ScrollNavbar />}
 
       <div
-        className={`${isMobile ? "w-full mt-0 p-0" : "max-w-lg mx-auto mt-6 p-3 rounded-xl"
-          } min-h-screen ${isMobile ? "" : "space-y-6"}`}
+        className={`${isMobile ? "w-full mt-0 p-0" : "max-w-lg mx-auto mt-6 p-3 rounded-xl"} min-h-screen ${isMobile ? "" : "space-y-6"
+          }`}
       >
-        <div id="first-section">
-          <SuggestionsBar />
-        </div>
+        {!propPosts && (
+          <div id="first-section">
+            <SuggestionsBar />
+          </div>
+        )}
 
         {posts.map((post) => {
-          const liked = likes[post.id] || false;
-          const isFollowed = followingIds.includes(post.user?.id);
-          const isLoading = loadingStates[post.user?.id] || false;
-          const avatar = post.user?.photoURL || "/default-avatar.png";
+          const liked = post.likes?.includes(currentUserId);
+          const followed = followingIds.includes(post.user?.id);
+          const loadF = loadingStates[post.user?.id];
+          const avatar = post.user?.photoURL;
           const username = post.user?.username || "Unknown";
-          const isOwnPost = post.user?.id === currentUserId;
+          const own = post.user?.id === currentUserId;
 
           return (
             <div
               key={post.id}
               className={`${isMobile
-                ? "border-b border-gray-100 bg-white mb-4"
-                : "rounded-3xl shadow-lg border border-gray-200 bg-gray-50"
-                } overflow-hidden flex flex-col justify-start ${post.status?.toLowerCase() === "pending"
-                  ? "ring-2 ring-gray-100 shadow-red-400/20"
-                  : ""
-                }`}
+                ? "border-b border-gray-100 bg-white mb-10"
+                : "rounded-3xl shadow-lg border border-gray-200 bg-white"
+                } overflow-hidden`}
             >
-              {/* Header */}
+              {/* ----- Header ----- */}
               <div className="flex items-start justify-between px-4 pt-3">
                 <div className="flex items-center gap-3">
                   <img
                     src={avatar}
-                    className="w-10 h-10 rounded-full border-2 border-purple-400 object-cover"
                     alt={username}
+                    className="w-10 h-10 rounded-full border-2 border-purple-400 object-cover"
                   />
                   <div>
                     <p className="font-semibold text-sm flex items-center gap-1">
                       {username}
                       {post.user?.userRole === "Department" && (
-                        <img
-                          src={verifyTick}
-                          alt="verified"
-                          className="w-4 h-4"
-                          title="Verified Department"
-                        />
+                        <img src={verifyTick} alt="verified" className="w-4 h-4" />
                       )}
                     </p>
                     <p className="text-xs text-[#782048]">@{username}</p>
                     <p className="text-[10px] text-gray-500">
-                      {formatDistanceToNow(
-                        post.createdAt?.toDate?.() || new Date(),
-                        { addSuffix: true }
-                      )}
+                      {formatDistanceToNow(post.createdAt?.toDate?.() || new Date(), { addSuffix: true })}
                     </p>
                   </div>
                 </div>
 
-                {!isOwnPost && (
+                {!own && (
                   <button
                     onClick={() => handleFollowToggle(post.user?.id)}
-                    disabled={isLoading}
-                    className={`px-4 py-2 text-sm rounded-full font-bold transition ${isFollowed
-                      ? "bg-gray-200 text-gray-700"
-                      : "bg-blue-500 text-white"
+                    disabled={loadF}
+                    className={`px-4 py-1.5 text-sm rounded-full font-semibold transition ${followed ? "bg-gray-200 text-gray-700" : "bg-blue-500 text-white"
                       }`}
                   >
-                    {isLoading ? (
-                      <FaSpinner className="animate-spin inline w-4 h-4" />
-                    ) : isFollowed ? (
-                      "Following"
-                    ) : (
-                      "Follow"
-                    )}
+                    {loadF ? <FaSpinner className="animate-spin w-4 h-4" /> : followed ? "Following" : "Follow"}
                   </button>
                 )}
               </div>
 
-              {/* Image and Geo */}
+              {/* ----- Image + Status ----- */}
               {post.imageUrl && (
-                <div className={`${isMobile ? "mt-0 px-0" : "mt-2 px-3"}`}>
-                  <div
-                    className={`relative ${isMobile ? "" : "rounded-2xl"
-                      } overflow-hidden bg-gray-200 shadow-sm aspect-square sm:aspect-[4/3] flex justify-center items-center`}
-                  >
-                    <img
-                      src={post.imageUrl}
-                      alt="Post"
-                      className="w-full h-full object-cover"
-                    />
+                <div className={`${isMobile ? "mt-0" : "mt-2 px-3"} relative`}>
+                  <div className="relative overflow-hidden bg-gray-200 aspect-square sm:aspect-[4/3]">
+                    <img src={post.imageUrl} alt="Post" className="w-full h-full object-cover" />
                     {post.status && (
-                      <div className="absolute top-3 right-3 z-10">
+                      <div className="absolute top-3 right-3">
                         <StatusBadge status={post.status} />
                       </div>
                     )}
                   </div>
 
-                  {/* Geo info below image */}
+                  {/* ----- GEO SECTION ----- */}
                   {post.geoData && (
-                    <div className="w-full bg-black/80 text-white text-xs sm:text-sm p-3 flex items-start gap-2 rounded-b-2xl">
-                      <div className="flex-shrink-0 w-12 h-12 bg-gray-300 overflow-hidden rounded-md">
+                    <div className="flex items-start bg-[#2c2c2c] text-white rounded-xl mt-2 overflow-hidden shadow-md">
+                      <div className="w-24 sm:w-28 h-20 sm:h-24 flex-shrink-0">
                         <img
                           src={geotagphoto}
                           alt="Map Preview"
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="flex flex-col gap-[2px] leading-tight">
-                        <div className="flex items-center gap-1 font-semibold text-red-400">
-                          <FaMapMarkerAlt className="inline-block" />
-                          <span>{post.geoData.country || "Unknown Country"}</span>
+                      <div className="flex flex-col justify-center px-3 py-2 text-xs sm:text-sm leading-tight">
+                        <div className="flex items-center gap-1">
+                          <FaMapMarkerAlt className="text-red-500 w-3 h-3 sm:w-4 sm:h-4" />
+                          <p className="font-semibold text-white">
+                            {post.geoData.country || "Unknown Country"}
+                          </p>
                         </div>
                         {post.geoData.region && (
-                          <span className="text-white/90">{post.geoData.region}</span>
+                          <p className="text-gray-300">{post.geoData.region}</p>
                         )}
                         {post.geoData.city && (
-                          <span className="text-white/80 italic">{post.geoData.city}</span>
+                          <p className="italic text-gray-400">{post.geoData.city}</p>
                         )}
-                        <span className="text-white/70">
+                        {post.geoData.address && (
+                          <p className="text-[11px] italic text-gray-400">
+                            {post.geoData.address}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-400 mt-1">
                           Lat: {post.geoData.latitude?.toFixed(4)}, Lng:{" "}
                           {post.geoData.longitude?.toFixed(4)}
-                        </span>
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Description and Tags */}
-              <div className="px-4 mt-3 flex-grow">
+              {/* ----- Description ----- */}
+              <div className="px-4 mt-4">
                 {post.description && (
-                  <p className="text-base sm:text-lg text-gray-700 font-semibold mb-1">
-                    {post.description}
-                  </p>
+                  <p className="text-base text-gray-800 font-semibold mb-1">{post.description}</p>
                 )}
                 {post.text && <p className="text-gray-600 text-sm">{post.text}</p>}
                 {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {post.tags.map((tag, index) => (
+                    {post.tags.map((tag, i) => (
                       <span
-                        key={index}
+                        key={i}
                         className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
-                        onClick={() =>
-                          navigate(`/explore/tags/${tag.replace("#", "")}`)
-                        }
+                        onClick={() => navigate(`/explore/tags/${tag.replace("#", "")}`)}
                       >
                         {tag.startsWith("#") ? tag : `#${tag}`}
                       </span>
@@ -454,27 +325,33 @@ export default function PostList() {
                 )}
               </div>
 
-              {/* Action Bar */}
-              <div className="flex items-center justify-between bg-gray-800 px-4 py-2 mt-auto text-gray-200">
-                <div className="flex gap-6 items-center text-sm">
+              {/* ----- Action Bar ----- */}
+              <div className="flex items-center justify-between bg-white border-t border-gray-100 px-4 py-3 mt-auto text-gray-600">
+                <div className="flex gap-6 items-center text-lg">
                   <div
                     onClick={() => navigate(`/comments/${post.id}`)}
-                    className="flex items-center gap-1 cursor-pointer hover:text-blue-400"
+                    className="flex items-center gap-1 cursor-pointer hover:text-blue-500"
                   >
                     <FaComment />
-                    <span>{getCommentCount(post.id)}</span>
+                    <span className="text-sm font-semibold">
+                      {post.commentsCount || post.comments?.length || 0}
+                    </span>
                   </div>
                   <div
-                    onClick={() => toggleLike(post.id)}
-                    className="flex items-center gap-1 cursor-pointer hover:text-red-400"
+                    onClick={() => toggleLike(post)}
+                    className="flex items-center gap-1 cursor-pointer hover:text-red-500"
                   >
-                    <FaHeart className={`${liked ? "text-red-500" : ""}`} />
-                    <span>{liked ? 1 : 0}</span>
+                    {liked ? (
+                      <FaHeart className="text-red-500" />
+                    ) : (
+                      <FaHeart className="text-gray-400" />
+                    )}
+                    <span className="text-sm font-semibold">
+                      {post.likes?.length || 0}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-4 text-lg">
-                  <FaPaperPlane className="cursor-pointer hover:text-green-400" />
-                </div>
+                <FaPaperPlane className="cursor-pointer hover:text-green-500" />
               </div>
             </div>
           );

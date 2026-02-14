@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { FaPlay } from "react-icons/fa";
 import PostModal from "../Explore/ExploreModel/Postmodel";
+import PostList from "./PostList";
 
 // ✅ Safe resolver
 const resolvePhotoURL = (val) => {
@@ -43,12 +44,13 @@ export default function Explore() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 697);
+  const [mobileFeedPosts, setMobileFeedPosts] = useState(null); // New state for mobile feed
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Updated breakpoint
   const userCache = useRef({});
 
   // Check screen size
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 697);
+    const handleResize = () => setIsMobile(window.innerWidth < 768); // Updated breakpoint
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -83,80 +85,72 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Container for content */}
       <div className={`w-full ${isMobile ? "pt-20 pb-24" : "pt-24 pb-8"}`}>
-        {/* 🚫 The search bar is removed here */}
+
 
         {loading ? (
-          <div className="max-w-5xl mx-auto px-1">
-            <div className="grid grid-cols-3 gap-px animate-pulse">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="aspect-square bg-gray-200" />
-              ))}
-            </div>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+          </div>
+        ) : mobileFeedPosts ? (
+          // --- Mobile Feed View using PostList ---
+          <div className="pb-20">
+            <PostList posts={mobileFeedPosts} />
           </div>
         ) : (
-          <>
-            {/* Posts Grid */}
-            <div className="max-w-5xl mx-auto px-1">
-              <div className="grid grid-cols-3 gap-px sm:gap-1">
-                {posts.map((post) =>
-                  post.imageUrl ? (
-                    <div
-                      key={post.id}
-                      className="relative group cursor-pointer aspect-square overflow-hidden bg-gray-100"
-                      onClick={() => setSelectedPost(post)}
-                    >
-                      <img
-                        src={post.imageUrl}
-                        alt={post.description || "Post"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-
-                      {/* Video Indicator */}
-                      {post.type === "video" && (
-                        <div className="absolute top-2 right-2 bg-black bg-opacity-50 p-1 rounded-full">
-                          <FaPlay className="text-white text-xs" />
-                        </div>
-                      )}
-
-                      {/* Hover overlay */}
-                      <div
-                        className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 
-                        transition-all duration-300 flex items-center justify-center gap-4 
-                        text-white font-semibold opacity-0 group-hover:opacity-100"
-                      >
-                        <div className="flex items-center gap-1 text-sm">
-                          <span>❤️</span>
-                          <span>{post.likes?.length || 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm">
-                          <span>💬</span>
-                          <span>{post.comments?.length || 0}</span>
-                        </div>
+          // --- Grid View (Original) ---
+          <div className="max-w-5xl mx-auto px-1">
+            <div className="grid grid-cols-3 gap-px sm:gap-1">
+              {posts.map((post) =>
+                post.imageUrl ? (
+                  <div
+                    key={post.id}
+                    className="relative group cursor-pointer aspect-square overflow-hidden bg-gray-100"
+                    onClick={() => {
+                      if (isMobile) {
+                        const index = posts.findIndex(p => p.id === post.id);
+                        const reorderedPosts = [...posts.slice(index), ...posts.slice(0, index)];
+                        setMobileFeedPosts(reorderedPosts);
+                      } else {
+                        setSelectedPost(post);
+                      }
+                    }}
+                  >
+                    <img
+                      src={post.imageUrl}
+                      alt={post.description || "Post"}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-6 text-white text-lg font-bold">
+                      <div className="flex items-center gap-2">
+                        <span>❤️</span> {post.likes?.length || 0}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span>💬</span> {post.comments?.length || 0}
                       </div>
                     </div>
-                  ) : null
-                )}
-              </div>
+                  </div>
+                ) : null
+              )}
             </div>
 
-            {/* Empty state */}
             {posts.filter((p) => p.imageUrl).length === 0 && (
               <div className="text-center py-16">
                 <p className="text-gray-500">No posts to explore yet</p>
               </div>
             )}
-
-            {/* Post Modal */}
-            <PostModal
-              open={!!selectedPost}
-              handleClose={() => setSelectedPost(null)}
-              post={selectedPost}
-            />
-          </>
+          </div>
         )}
+
+        {/* Post Modal (Desktop & Mobile Comments if needed) */}
+        <PostModal
+          open={!!selectedPost}
+          handleClose={() => setSelectedPost(null)}
+          post={selectedPost}
+          posts={posts}
+          onPostChange={setSelectedPost}
+        />
       </div>
     </div>
   );
