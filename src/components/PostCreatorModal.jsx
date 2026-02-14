@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { db } from "../firebase/firebase";
 import {
   collection,
@@ -10,7 +10,6 @@ import {
 import { getAuth } from "firebase/auth";
 import {
   FaTimes,
-  FaCamera,
   FaCheck,
   FaMapMarkerAlt,
   FaRedo,
@@ -21,63 +20,16 @@ import "react-toastify/dist/ReactToastify.css";
 import "./PostCreatorModal.css";
 import Lottie from "lottie-react";
 import CheckedAnimation from "../assets/Checked.json";
-import Cropper from "react-easy-crop";
+import ReactCrop from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 
 const STEPS = { CAMERA: "camera", CROP: "crop", PREVIEW: "preview" };
-
-// --- Helper: createImage ---
-const createImage = (url) =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", (error) => reject(error));
-    image.setAttribute("crossOrigin", "anonymous");
-    image.src = url;
-  });
-
-// --- Helper: getCroppedImg ---
-async function getCroppedImg(imageSrc, pixelCrop) {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) {
-    return null;
-  }
-
-  // set canvas size to match the bounding box
-  canvas.width = image.width;
-  canvas.height = image.height;
-
-  // draw image
-  ctx.drawImage(image, 0, 0);
-
-  // croppedAreaPixels values are bounding box relative
-  // extract the cropped image using these values
-  const data = ctx.getImageData(
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  // set canvas width to final desired crop size - this will clear existing context
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-
-  // paste generated rotate image playing with the top left corner of "current" context
-  ctx.putImageData(data, 0, 0);
-
-  // As Base64 string
-  return canvas.toDataURL("image/jpeg", 0.9);
-}
 
 export default function PostCreatorModal({ isOpen, onClose }) {
   const [step, setStep] = useState(STEPS.CAMERA);
   const [description, setDescription] = useState("");
   const [originalImageData, setOriginalImageData] = useState(null);
   const [croppedImageData, setCroppedImageData] = useState(null);
-  // Removed Tags state
   const [geoData, setGeoData] = useState(null);
   const [showSuccessAnim, setShowSuccessAnim] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
@@ -86,23 +38,30 @@ export default function PostCreatorModal({ isOpen, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Crop State
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  // Crop State for react-image-crop
+  const [crop, setCrop] = useState({
+    unit: "%",
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5,
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const imgRef = useRef(null);
 
   // --- Camera
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
+        video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       streamRef.current = stream;
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error("❌ Cannot access camera");
     }
   };
@@ -119,14 +78,11 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     const canvas = document.createElement("canvas");
     const vid = videoRef.current;
 
-    // Set canvas dimensions to match the video
     canvas.width = vid.videoWidth;
     canvas.height = vid.videoHeight;
 
     const ctx = canvas.getContext("2d");
     if (ctx) {
-      // Flip horizontal for selfie mode if needed, but standard camera usually expects mirror
-      // For now, drawing directly
       ctx.drawImage(vid, 0, 0);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       setOriginalImageData(dataUrl);
@@ -135,8 +91,6 @@ export default function PostCreatorModal({ isOpen, onClose }) {
       getLocation();
     }
   };
-
-
 
   const getLocation = () => {
     if (!navigator.geolocation) return;
@@ -154,8 +108,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
             city: data.city || data.locality,
             region: data.principalSubdivision,
             country: data.countryName,
-            address: `${data.city || data.locality}, ${data.principalSubdivision
-              }, ${data.countryName}`,
+            address: `${data.city || data.locality}, ${data.principalSubdivision}, ${data.countryName}`,
           });
         } catch {
           /* silent */
@@ -165,42 +118,78 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     );
   };
 
-  // --- Crop Logic
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
+  // --- Crop Logic with react-image-crop
+  const getCroppedImg = () => {
+    if (!completedCrop || !imgRef.current) {
+      toast.error("Please adjust the crop area");
+      return null;
+    }
 
-  const finalizeCrop = async () => {
-    try {
-      const croppedImage = await getCroppedImg(
-        originalImageData,
-        croppedAreaPixels
-      );
+    const image = imgRef.current;
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const ctx = canvas.getContext("2d");
+
+    const pixelRatio = window.devicePixelRatio || 1;
+
+    canvas.width = completedCrop.width * scaleX * pixelRatio;
+    canvas.height = completedCrop.height * scaleY * pixelRatio;
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.imageSmoothingQuality = "high";
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY
+    );
+
+    return canvas.toDataURL("image/jpeg", 0.9);
+  };
+
+  const finalizeCrop = () => {
+    const croppedImage = getCroppedImg();
+    if (croppedImage) {
       setCroppedImageData(croppedImage);
       setStep(STEPS.PREVIEW);
-    } catch (e) {
-      console.error(e);
-      toast.error("Error cropping image");
     }
   };
 
-  // --- Submit
+  // --- Submit (Original Working Version)
   const handleSubmit = async () => {
     const user = getAuth().currentUser;
     if (!user) return toast.error("❌ Login required");
+    if (!croppedImageData) return toast.error("❌ No image to upload");
+
     setIsPosting(true);
     try {
+      const splitTags = (description.match(/#[a-zA-Z0-9_]+/g) || []).map((tag) =>
+        tag.toLowerCase()
+      );
+
       const ref = doc(collection(db, "posts"));
       const batch = writeBatch(db);
+
       batch.set(ref, {
         uid: user.uid,
+        userId: user.uid,
         description,
-        imageUrl: croppedImageData,
-        tags: [], // Removed tags
+        imageUrl: croppedImageData, // Base64 for now (works for smaller images)
+        tags: splitTags,
         geoData,
         status: "pending",
         createdAt: serverTimestamp(),
+        likes: [],
+        commentsCount: 0,
       });
+
       batch.update(doc(db, "users", user.uid), { postCount: increment(1) });
       await batch.commit();
       await updateUserSticksOnPost(user.uid);
@@ -209,8 +198,8 @@ export default function PostCreatorModal({ isOpen, onClose }) {
       toast.success("🚀 Posted successfully!");
       setTimeout(cleanupAndClose, 2000);
     } catch (e) {
-      console.error(e);
-      toast.error("❌ Error posting");
+      console.error("Post Error:", e);
+      toast.error("❌ Error posting: " + e.message);
     } finally {
       setIsPosting(false);
     }
@@ -224,14 +213,26 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     setCroppedImageData(null);
     setGeoData(null);
     setShowSuccessAnim(false);
+    setIsPosting(false);
+    setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
+    setCompletedCrop(null);
     onClose();
   };
 
+  const retakePhoto = () => {
+    setOriginalImageData(null);
+    setCroppedImageData(null);
+    setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
+    setCompletedCrop(null);
+    setStep(STEPS.CAMERA);
+    startCamera();
+  };
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && step === STEPS.CAMERA) {
       startCamera();
       document.body.style.overflow = "hidden";
-    } else {
+    } else if (!isOpen) {
       stopCamera();
       document.body.style.overflow = "";
     }
@@ -239,16 +240,14 @@ export default function PostCreatorModal({ isOpen, onClose }) {
       stopCamera();
       document.body.style.overflow = "";
     };
-  }, [isOpen]);
+  }, [isOpen, step]);
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center"
-      style={{ touchAction: "none" }}
-    >
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
       <ToastContainer position="top-center" autoClose={2500} />
+
       {showSuccessAnim && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999]">
           <Lottie
@@ -260,9 +259,10 @@ export default function PostCreatorModal({ isOpen, onClose }) {
       )}
 
       <div className="bg-white w-full h-full sm:rounded-xl sm:h-auto sm:max-h-[90vh] sm:max-w-4xl overflow-hidden flex flex-col">
+
         {/* Header */}
         <div className="flex justify-between items-center px-4 py-3 border-b bg-white z-10">
-          <button onClick={cleanupAndClose} className="text-gray-600">
+          <button onClick={cleanupAndClose} className="text-gray-600 hover:text-gray-800">
             <FaTimes className="text-xl" />
           </button>
           <h2 className="font-semibold text-lg">Create Post</h2>
@@ -270,12 +270,12 @@ export default function PostCreatorModal({ isOpen, onClose }) {
             <button
               onClick={handleSubmit}
               disabled={isPosting}
-              className="text-blue-600 font-bold text-lg disabled:opacity-50"
+              className="text-blue-600 font-bold text-lg disabled:opacity-50 hover:text-blue-700"
             >
               {isPosting ? "Sharing..." : "Share"}
             </button>
           ) : (
-            <div className="w-[80px]" /> // spacer
+            <div className="w-[80px]" />
           )}
         </div>
 
@@ -293,9 +293,8 @@ export default function PostCreatorModal({ isOpen, onClose }) {
                 className="w-full h-full object-cover"
               />
 
-              {/* Bottom Camera Controls using Overlay */}
+              {/* Capture Button */}
               <div className="absolute bottom-10 flex gap-8 items-center z-20">
-                {/* Capture Button */}
                 <button
                   onClick={capturePhoto}
                   className="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-xl flex items-center justify-center hover:scale-105 transition-transform"
@@ -306,58 +305,59 @@ export default function PostCreatorModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* STEP 2: CROP (React Easy Crop) */}
+          {/* STEP 2: CROP (React Image Crop) */}
           {step === STEPS.CROP && originalImageData && (
-            <div className="relative w-full h-full bg-black">
-              <Cropper
-                image={originalImageData}
+            <div className="relative w-full h-full bg-black flex items-center justify-center">
+              <ReactCrop
                 crop={crop}
-                zoom={zoom}
-                aspect={4 / 5} // Suggested aspect ratio for feed posts
-                onCropChange={setCrop}
-                onCropComplete={onCropComplete}
-                onZoomChange={setZoom}
-                objectFit="contain" // Ensures whole image is visible if user wants
-                showGrid={true}
-              />
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={undefined} // Free-form crop
+                className="max-h-full"
+              >
+                <img
+                  ref={imgRef}
+                  src={originalImageData}
+                  alt="Crop"
+                  className="max-h-[80vh] max-w-full"
+                  onLoad={(e) => {
+                    const { width, height } = e.currentTarget;
+                    setCrop({
+                      unit: "%",
+                      width: 90,
+                      height: 90,
+                      x: 5,
+                      y: 5,
+                    });
+                  }}
+                />
+              </ReactCrop>
+
               {/* Crop Controls */}
               <div className="absolute top-4 right-4 z-30">
                 <button
                   onClick={finalizeCrop}
-                  className="bg-white text-black px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2"
+                  className="bg-white text-black px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 hover:bg-gray-100"
                 >
                   Next <FaCheck />
                 </button>
               </div>
               <div className="absolute top-4 left-4 z-30">
                 <button
-                  onClick={() => setStep(STEPS.CAMERA)}
-                  className="bg-black/50 text-white px-3 py-2 rounded-full backdrop-blur-md"
+                  onClick={retakePhoto}
+                  className="bg-black/50 text-white px-3 py-2 rounded-full backdrop-blur-md hover:bg-black/70 flex items-center gap-2"
                 >
-                  <FaRedo />
+                  <FaRedo /> Retake
                 </button>
-              </div>
-
-              {/* Zoom Slider */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-3/4 z-30">
-                <input
-                  type="range"
-                  value={zoom}
-                  min={1}
-                  max={3}
-                  step={0.1}
-                  aria-labelledby="Zoom"
-                  onChange={(e) => setZoom(e.target.value)}
-                  className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer range-sm"
-                />
               </div>
             </div>
           )}
 
-          {/* STEP 3: PREVIEW */}
+          {/* STEP 3: PREVIEW (Original Layout) */}
           {step === STEPS.PREVIEW && croppedImageData && (
             <div className="flex flex-col h-full bg-white">
               <div className="flex-1 bg-gray-50 flex flex-col sm:flex-row overflow-hidden">
+
                 {/* Image Preview */}
                 <div className="w-full sm:w-1/2 h-[50vh] sm:h-auto bg-black flex items-center justify-center">
                   <img
@@ -386,7 +386,9 @@ export default function PostCreatorModal({ isOpen, onClose }) {
                     placeholder="Write a caption..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    autoFocus
                   />
+
                   <div className="h-px bg-gray-200 w-full my-2" />
 
                   {/* Geo Tag Display */}
@@ -394,9 +396,11 @@ export default function PostCreatorModal({ isOpen, onClose }) {
                     <div className="flex items-center gap-2 text-sm">
                       <FaMapMarkerAlt className="text-gray-400" />
                       {geoData ? (
-                        <span className="text-gray-800 font-medium">{geoData.city || geoData.region || "Location inferred"}</span>
+                        <span className="text-gray-800 font-medium">
+                          {geoData.city || geoData.region || "Location"}
+                        </span>
                       ) : (
-                        <span className="text-gray-400">Location will be added automatically</span>
+                        <span className="text-gray-400">Add location</span>
                       )}
                     </div>
                   </div>
