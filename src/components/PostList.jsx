@@ -268,12 +268,12 @@ export default function PostList({ posts: propPosts }) {
 
                   {/* ----- GEO SECTION ----- */}
                   {post.geoData && (
-                    <div className="flex items-start bg-[#2c2c2c] text-white rounded-xl mt-2 overflow-hidden shadow-md">
+                    <div className="flex items-start bg-[#2c2c2c] text-white rounded-xl -mt-2 overflow-hidden shadow-md">
                       <div className="w-24 sm:w-28 h-20 sm:h-24 flex-shrink-0">
                         <img
                           src={geotagphoto}
                           alt="Map Preview"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full  mt-2.5 object-cover"
                         />
                       </div>
                       <div className="flex flex-col justify-center px-3 py-2 text-xs sm:text-sm leading-tight">
