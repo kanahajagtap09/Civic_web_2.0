@@ -13,6 +13,7 @@ import {
   FaCheck,
   FaMapMarkerAlt,
   FaRedo,
+  FaGlobeAmericas,
 } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import { updateUserSticksOnPost } from "../firebase/userSticks";
@@ -33,6 +34,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
   const [geoData, setGeoData] = useState(null);
   const [showSuccessAnim, setShowSuccessAnim] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
+  const [showGeoDetails, setShowGeoDetails] = useState(false);
 
   // Camera Refs
   const videoRef = useRef(null);
@@ -109,6 +111,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
             region: data.principalSubdivision,
             country: data.countryName,
             address: `${data.city || data.locality}, ${data.principalSubdivision}, ${data.countryName}`,
+            fullAddress: data.localityInfo?.administrative || [],
           });
         } catch {
           /* silent */
@@ -162,7 +165,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     }
   };
 
-  // --- Submit (Original Working Version)
+  // --- Submit
   const handleSubmit = async () => {
     const user = getAuth().currentUser;
     if (!user) return toast.error("❌ Login required");
@@ -181,7 +184,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
         uid: user.uid,
         userId: user.uid,
         description,
-        imageUrl: croppedImageData, // Base64 for now (works for smaller images)
+        imageUrl: croppedImageData,
         tags: splitTags,
         geoData,
         status: "pending",
@@ -216,6 +219,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
     setIsPosting(false);
     setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
     setCompletedCrop(null);
+    setShowGeoDetails(false);
     onClose();
   };
 
@@ -245,46 +249,54 @@ export default function PostCreatorModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
-      <ToastContainer position="top-center" autoClose={2500} />
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-0 md:p-4">
+      <ToastContainer position="top-center" autoClose={2500} theme="dark" />
 
       {showSuccessAnim && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999]">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[999]">
           <Lottie
             animationData={CheckedAnimation}
             loop={false}
-            style={{ width: 180 }}
+            style={{ width: 200 }}
           />
         </div>
       )}
 
-      <div className="bg-white w-full h-full sm:rounded-xl sm:h-auto sm:max-h-[90vh] sm:max-w-4xl overflow-hidden flex flex-col">
+      {/* Fixed Size Modal Container */}
+      <div className="bg-white w-full h-full md:w-[90vw] md:max-w-5xl md:h-[85vh] md:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
 
-        {/* Header */}
-        <div className="flex justify-between items-center px-4 py-3 border-b bg-white z-10">
-          <button onClick={cleanupAndClose} className="text-gray-600 hover:text-gray-800">
-            <FaTimes className="text-xl" />
+        {/* Header - Instagram Style */}
+        <div className="flex justify-between items-center px-4 py-3 border-b bg-white z-10 flex-shrink-0">
+          <button
+            onClick={cleanupAndClose}
+            className="text-gray-700 hover:text-gray-900 transition p-1"
+          >
+            <FaTimes className="text-2xl" />
           </button>
-          <h2 className="font-semibold text-lg">Create Post</h2>
+          <h2 className="font-bold text-lg tracking-tight">
+            {step === STEPS.CAMERA && "Take Photo"}
+            {step === STEPS.CROP && "Crop"}
+            {step === STEPS.PREVIEW && "Create new post"}
+          </h2>
           {step === STEPS.PREVIEW ? (
             <button
               onClick={handleSubmit}
               disabled={isPosting}
-              className="text-blue-600 font-bold text-lg disabled:opacity-50 hover:text-blue-700"
+              className="text-blue-500 font-semibold text-base disabled:opacity-50 hover:text-blue-600 transition"
             >
               {isPosting ? "Sharing..." : "Share"}
             </button>
           ) : (
-            <div className="w-[80px]" />
+            <div className="w-[60px]" />
           )}
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 relative flex flex-col bg-black overflow-hidden">
+        {/* Content Area - Fixed Height */}
+        <div className="flex-1 relative flex flex-col overflow-hidden">
 
           {/* STEP 1: CAMERA */}
           {step === STEPS.CAMERA && (
-            <div className="relative w-full h-full flex flex-col items-center justify-center bg-black">
+            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center">
               <video
                 ref={videoRef}
                 autoPlay
@@ -293,33 +305,33 @@ export default function PostCreatorModal({ isOpen, onClose }) {
                 className="w-full h-full object-cover"
               />
 
-              {/* Capture Button */}
-              <div className="absolute bottom-10 flex gap-8 items-center z-20">
+              {/* Capture Button - Instagram Style */}
+              <div className="absolute bottom-8 flex gap-8 items-center z-20">
                 <button
                   onClick={capturePhoto}
-                  className="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-xl flex items-center justify-center hover:scale-105 transition-transform"
+                  className="w-20 h-20 rounded-full border-4 border-white shadow-2xl flex items-center justify-center hover:scale-105 transition-transform active:scale-95"
                 >
-                  <div className="w-16 h-16 bg-white rounded-full border-2 border-black" />
+                  <div className="w-16 h-16 bg-white rounded-full" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: CROP (React Image Crop) */}
+          {/* STEP 2: CROP */}
           {step === STEPS.CROP && originalImageData && (
-            <div className="relative w-full h-full bg-black flex items-center justify-center">
+            <div className="absolute inset-0 bg-black flex items-center justify-center">
               <ReactCrop
                 crop={crop}
                 onChange={(c) => setCrop(c)}
                 onComplete={(c) => setCompletedCrop(c)}
-                aspect={undefined} // Free-form crop
-                className="max-h-full"
+                aspect={undefined}
+                className="max-h-full max-w-full"
               >
                 <img
                   ref={imgRef}
                   src={originalImageData}
                   alt="Crop"
-                  className="max-h-[80vh] max-w-full"
+                  style={{ maxHeight: '100%', maxWidth: '100%', display: 'block' }}
                   onLoad={(e) => {
                     const { width, height } = e.currentTarget;
                     setCrop({
@@ -333,11 +345,11 @@ export default function PostCreatorModal({ isOpen, onClose }) {
                 />
               </ReactCrop>
 
-              {/* Crop Controls */}
+              {/* Crop Controls - Instagram Style */}
               <div className="absolute top-4 right-4 z-30">
                 <button
                   onClick={finalizeCrop}
-                  className="bg-white text-black px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 hover:bg-gray-100"
+                  className="bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold shadow-lg hover:bg-blue-600 transition flex items-center gap-2"
                 >
                   Next <FaCheck />
                 </button>
@@ -345,7 +357,7 @@ export default function PostCreatorModal({ isOpen, onClose }) {
               <div className="absolute top-4 left-4 z-30">
                 <button
                   onClick={retakePhoto}
-                  className="bg-black/50 text-white px-3 py-2 rounded-full backdrop-blur-md hover:bg-black/70 flex items-center gap-2"
+                  className="bg-gray-800/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition flex items-center gap-2"
                 >
                   <FaRedo /> Retake
                 </button>
@@ -353,58 +365,111 @@ export default function PostCreatorModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* STEP 3: PREVIEW (Original Layout) */}
+          {/* STEP 3: PREVIEW - Instagram Layout */}
           {step === STEPS.PREVIEW && croppedImageData && (
-            <div className="flex flex-col h-full bg-white">
-              <div className="flex-1 bg-gray-50 flex flex-col sm:flex-row overflow-hidden">
+            <div className="absolute inset-0 flex flex-col md:flex-row bg-white">
 
-                {/* Image Preview */}
-                <div className="w-full sm:w-1/2 h-[50vh] sm:h-auto bg-black flex items-center justify-center">
+              {/* Left: Image Preview - Fixed Size */}
+              <div className="w-full md:w-[60%] h-[45vh] md:h-full bg-black flex items-center justify-center flex-shrink-0">
+                <img
+                  src={croppedImageData}
+                  alt="Preview"
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+
+              {/* Right: Details - Fixed Size */}
+              <div className="w-full md:w-[40%] flex flex-col bg-white overflow-hidden">
+
+                {/* User Info */}
+                <div className="flex items-center gap-3 p-4 border-b flex-shrink-0">
                   <img
-                    src={croppedImageData}
-                    alt="Preview"
-                    className="max-h-full max-w-full object-contain"
+                    src={getAuth().currentUser?.photoURL || "/default-avatar.png"}
+                    alt="User"
+                    className="w-10 h-10 rounded-full object-cover border"
                   />
+                  <span className="font-semibold text-gray-900">
+                    {getAuth().currentUser?.displayName || "User"}
+                  </span>
                 </div>
 
-                {/* Details Input */}
-                <div className="w-full sm:w-1/2 p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto">
-                  <div className="flex items-center gap-3 mb-2">
-                    <img
-                      src={getAuth().currentUser?.photoURL || "/default-avatar.png"}
-                      alt="User"
-                      className="w-10 h-10 rounded-full object-cover border border-gray-200"
-                    />
-                    <span className="font-semibold text-gray-800">
-                      {getAuth().currentUser?.displayName || "User"}
-                    </span>
-                  </div>
-
+                {/* Caption Input - Scrollable */}
+                <div className="flex-1 overflow-y-auto">
                   <textarea
-                    className="w-full p-0 text-base text-gray-700 placeholder-gray-400 border-none focus:ring-0 resize-none"
-                    rows="4"
+                    className="w-full h-full p-4 text-base text-gray-900 placeholder-gray-400 border-none focus:ring-0 resize-none"
                     placeholder="Write a caption..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     autoFocus
                   />
+                </div>
 
-                  <div className="h-px bg-gray-200 w-full my-2" />
+                {/* Location - Expandable on Hover */}
+                {geoData && (
+                  <div className="border-t flex-shrink-0">
+                    <div
+                      className="relative group"
+                      onMouseEnter={() => setShowGeoDetails(true)}
+                      onMouseLeave={() => setShowGeoDetails(false)}
+                    >
+                      {/* Collapsed View */}
+                      <div className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition">
+                        <FaMapMarkerAlt className="text-gray-500 text-lg" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {geoData.city || geoData.region}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {geoData.country}
+                          </p>
+                        </div>
+                        <FaGlobeAmericas className="text-gray-400" />
+                      </div>
 
-                  {/* Geo Tag Display */}
-                  <div className="flex items-center justify-between text-gray-600">
-                    <div className="flex items-center gap-2 text-sm">
-                      <FaMapMarkerAlt className="text-gray-400" />
-                      {geoData ? (
-                        <span className="text-gray-800 font-medium">
-                          {geoData.city || geoData.region || "Location"}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">Add location</span>
+                      {/* Expanded Details on Hover */}
+                      {showGeoDetails && (
+                        <div className="absolute bottom-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mb-2 p-4 z-50 animate-fade-in">
+                          <h4 className="font-semibold text-sm text-gray-900 mb-3 flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-blue-500" />
+                            Location Details
+                          </h4>
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">City:</span>
+                              <span className="font-medium text-gray-900">{geoData.city || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Region:</span>
+                              <span className="font-medium text-gray-900">{geoData.region || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Country:</span>
+                              <span className="font-medium text-gray-900">{geoData.country || "N/A"}</span>
+                            </div>
+                            <div className="h-px bg-gray-200 my-2" />
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Latitude:</span>
+                              <span className="font-mono text-gray-900">{geoData.latitude.toFixed(6)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Longitude:</span>
+                              <span className="font-mono text-gray-900">{geoData.longitude.toFixed(6)}</span>
+                            </div>
+                            {geoData.address && (
+                              <>
+                                <div className="h-px bg-gray-200 my-2" />
+                                <div>
+                                  <span className="text-gray-500 block mb-1">Full Address:</span>
+                                  <p className="text-gray-900 leading-relaxed">{geoData.address}</p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}
