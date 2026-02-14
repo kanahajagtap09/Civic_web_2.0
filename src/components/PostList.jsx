@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useRef } from "react";
 import { db } from "../firebase/firebase";
 import {
@@ -164,28 +162,24 @@ export default function PostList() {
   const [followingIds, setFollowingIds] = useState([]);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 697);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const userCache = useRef({});
   const [likes, setLikes] = useState(() =>
     JSON.parse(localStorage.getItem("likes") || "{}")
   );
   const [loadingStates, setLoadingStates] = useState({});
-
   const navigate = useNavigate();
   const auth = getAuth();
 
+  // Responsive
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 697);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("likes", JSON.stringify(likes));
-  }, [likes]);
+  useEffect(() => localStorage.setItem("likes", JSON.stringify(likes)), [likes]);
 
   const getCommentCount = (pid) => {
     const stored = localStorage.getItem(`comments_${pid}`);
@@ -194,11 +188,8 @@ export default function PostList() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setCurrentUserId(user.uid);
-      } else {
-        setCurrentUserId(null);
-      }
+      if (user) setCurrentUserId(user.uid);
+      else setCurrentUserId(null);
       setAuthChecked(true);
     });
     return () => unsubscribe();
@@ -220,7 +211,6 @@ export default function PostList() {
   useEffect(() => {
     if (!currentUserId) return;
     setLoading(true);
-
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, async (snap) => {
       const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -242,7 +232,6 @@ export default function PostList() {
       setPosts(enriched);
       setLoading(false);
     });
-
     return () => unsub();
   }, [currentUserId]);
 
@@ -275,8 +264,8 @@ export default function PostList() {
         batch.delete(myFollowingDoc);
         batch.delete(theirFollowersDoc);
         await batch.commit();
-        await updateDoc(theirUserRef, { followersCount: increment(-1) }).catch(() =>
-          setDoc(theirUserRef, { followersCount: 0 }, { merge: true })
+        await updateDoc(theirUserRef, { followersCount: increment(-1) }).catch(
+          () => setDoc(theirUserRef, { followersCount: 0 }, { merge: true })
         );
         setFollowingIds((prev) => prev.filter((id) => id !== userId));
       } else {
@@ -287,8 +276,8 @@ export default function PostList() {
         batch.set(myFollowingDoc, { followedAt: serverTimestamp() });
         batch.set(theirFollowersDoc, { followedAt: serverTimestamp() });
         await batch.commit();
-        await updateDoc(theirUserRef, { followersCount: increment(1) }).catch(() =>
-          setDoc(theirUserRef, { followersCount: 1 }, { merge: true })
+        await updateDoc(theirUserRef, { followersCount: increment(1) }).catch(
+          () => setDoc(theirUserRef, { followersCount: 1 }, { merge: true })
         );
         setFollowingIds((prev) => [...prev, userId]);
       }
@@ -313,7 +302,10 @@ export default function PostList() {
     <>
       {isMobile && <ScrollNavbar />}
 
-      <div className="max-w-lg mx-auto mt-6 space-y-6 min-h-screen rounded-xl p-3">
+      <div
+        className={`${isMobile ? "w-full mt-0 p-0" : "max-w-lg mx-auto mt-6 p-3 rounded-xl"
+          } min-h-screen ${isMobile ? "" : "space-y-6"}`}
+      >
         <div id="first-section">
           <SuggestionsBar />
         </div>
@@ -329,11 +321,13 @@ export default function PostList() {
           return (
             <div
               key={post.id}
-              className={`rounded-3xl overflow-hidden shadow-lg border border-gray-200 bg-gray-50 ${
-                post.status?.toLowerCase() === "pending"
+              className={`${isMobile
+                ? "border-b border-gray-100 bg-white mb-4"
+                : "rounded-3xl shadow-lg border border-gray-200 bg-gray-50"
+                } overflow-hidden flex flex-col justify-start ${post.status?.toLowerCase() === "pending"
                   ? "ring-2 ring-gray-100 shadow-red-400/20"
                   : ""
-              }`}
+                }`}
             >
               {/* Header */}
               <div className="flex items-start justify-between px-4 pt-3">
@@ -365,16 +359,14 @@ export default function PostList() {
                   </div>
                 </div>
 
-                {/* Follow Button */}
                 {!isOwnPost && (
                   <button
                     onClick={() => handleFollowToggle(post.user?.id)}
                     disabled={isLoading}
-                    className={`px-4 py-2 text-sm rounded-full font-bold transition ${
-                      isFollowed
-                        ? "bg-gray-200 text-gray-700"
-                        : "bg-blue-500 text-white"
-                    }`}
+                    className={`px-4 py-2 text-sm rounded-full font-bold transition ${isFollowed
+                      ? "bg-gray-200 text-gray-700"
+                      : "bg-blue-500 text-white"
+                      }`}
                   >
                     {isLoading ? (
                       <FaSpinner className="animate-spin inline w-4 h-4" />
@@ -387,108 +379,103 @@ export default function PostList() {
                 )}
               </div>
 
-              {/* Post Image + Geo + Caption */}
+              {/* Image and Geo */}
               {post.imageUrl && (
-                <div className="relative mt-2 px-3 mb-5">
-                  <div className="relative rounded-2xl overflow-hidden bg-gray-200 shadow-sm aspect-square sm:aspect-[4/3] flex justify-center items-center">
+                <div className={`${isMobile ? "mt-0 px-0" : "mt-2 px-3"}`}>
+                  <div
+                    className={`relative ${isMobile ? "" : "rounded-2xl"
+                      } overflow-hidden bg-gray-200 shadow-sm aspect-square sm:aspect-[4/3] flex justify-center items-center`}
+                  >
                     <img
                       src={post.imageUrl}
                       alt="Post"
                       className="w-full h-full object-cover"
                     />
-
                     {post.status && (
                       <div className="absolute top-3 right-3 z-10">
                         <StatusBadge status={post.status} />
                       </div>
                     )}
-
-                    {post.geoData && (
-                      <div className="absolute bottom-0 left-0 w-full bg-black/70 text-white text-xs sm:text-sm p-3 flex items-start gap-2 backdrop-blur-sm">
-                        <div className="flex-shrink-0 w-13 h-13  md:w-23 md:h-23 bg-gray-300 overflow-hidden rounded-md ">
-                          <img
-                            src={geotagphoto}
-                            alt="Map Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-[2px] leading-tight">
-                          <div className="flex items-center gap-1 font-semibold text-red-400">
-                            <FaMapMarkerAlt className="inline-block" />
-                            <span>
-                              {post.geoData.country || "Unknown Country"}
-                            </span>
-                          </div>
-                          {post.geoData.region && (
-                            <span className="text-white/90">
-                              {post.geoData.region}
-                            </span>
-                          )}
-                          {post.geoData.city && (
-                            <span className="text-white/80 italic">
-                              {post.geoData.city}
-                            </span>
-                          )}
-                          <span className="text-white/70">
-                            Lat: {post.geoData.latitude?.toFixed(4)}, Lng:{" "}
-                            {post.geoData.longitude?.toFixed(4)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="px-2 mt-3">
-                    {post.description && (
-                      <p className="text-base sm:text-lg text-gray-700 font-semibold mb-1">
-                        {post.description}
-                      </p>
-                    )}
-                    {post.text && (
-                      <p className="text-gray-600 text-sm">{post.text}</p>
-                    )}
-                    {post.tags && post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {post.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
-                            onClick={() =>
-                              navigate(`/explore/tags/${tag.replace("#", "")}`)
-                            }
-                          >
-                            {tag.startsWith("#") ? tag : `#${tag}`}
-                          </span>
-                        ))}
+                  {/* Geo info below image */}
+                  {post.geoData && (
+                    <div className="w-full bg-black/80 text-white text-xs sm:text-sm p-3 flex items-start gap-2 rounded-b-2xl mt-1">
+                      <div className="flex-shrink-0 w-12 h-12 bg-gray-300 overflow-hidden rounded-md">
+                        <img
+                          src={geotagphoto}
+                          alt="Map Preview"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center justify-between bg-gray-800 px-4 py-2 rounded-b-2xl text-gray-200">
-                    <div className="flex gap-6 items-center text-sm">
-                      <div
-                        onClick={() => navigate(`/comments/${post.id}`)}
-                        className="flex items-center gap-1 cursor-pointer hover:text-blue-400"
-                      >
-                        <FaComment />
-                        <span>{getCommentCount(post.id)}</span>
-                      </div>
-                      <div
-                        onClick={() => toggleLike(post.id)}
-                        className="flex items-center gap-1 cursor-pointer hover:text-red-400"
-                      >
-                        <FaHeart className={`${liked ? "text-red-500" : ""}`} />
-                        <span>{liked ? 1 : 0}</span>
+                      <div className="flex flex-col gap-[2px] leading-tight">
+                        <div className="flex items-center gap-1 font-semibold text-red-400">
+                          <FaMapMarkerAlt className="inline-block" />
+                          <span>{post.geoData.country || "Unknown Country"}</span>
+                        </div>
+                        {post.geoData.region && (
+                          <span className="text-white/90">{post.geoData.region}</span>
+                        )}
+                        {post.geoData.city && (
+                          <span className="text-white/80 italic">{post.geoData.city}</span>
+                        )}
+                        <span className="text-white/70">
+                          Lat: {post.geoData.latitude?.toFixed(4)}, Lng:{" "}
+                          {post.geoData.longitude?.toFixed(4)}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex gap-4 text-lg">
-                      <FaPaperPlane className="cursor-pointer hover:text-green-400" />
-                      
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
+
+              {/* Description and Tags */}
+              <div className="px-4 mt-3 flex-grow">
+                {post.description && (
+                  <p className="text-base sm:text-lg text-gray-700 font-semibold mb-1">
+                    {post.description}
+                  </p>
+                )}
+                {post.text && <p className="text-gray-600 text-sm">{post.text}</p>}
+                {post.tags && post.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {post.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
+                        onClick={() =>
+                          navigate(`/explore/tags/${tag.replace("#", "")}`)
+                        }
+                      >
+                        {tag.startsWith("#") ? tag : `#${tag}`}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex items-center justify-between bg-gray-800 px-4 py-2 mt-auto text-gray-200">
+                <div className="flex gap-6 items-center text-sm">
+                  <div
+                    onClick={() => navigate(`/comments/${post.id}`)}
+                    className="flex items-center gap-1 cursor-pointer hover:text-blue-400"
+                  >
+                    <FaComment />
+                    <span>{getCommentCount(post.id)}</span>
+                  </div>
+                  <div
+                    onClick={() => toggleLike(post.id)}
+                    className="flex items-center gap-1 cursor-pointer hover:text-red-400"
+                  >
+                    <FaHeart className={`${liked ? "text-red-500" : ""}`} />
+                    <span>{liked ? 1 : 0}</span>
+                  </div>
+                </div>
+                <div className="flex gap-4 text-lg">
+                  <FaPaperPlane className="cursor-pointer hover:text-green-400" />
+                </div>
+              </div>
             </div>
           );
         })}

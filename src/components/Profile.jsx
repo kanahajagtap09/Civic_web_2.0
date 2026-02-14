@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { useNavigate, Link } from "react-router-dom";
 import HorizontalTabs from "../Profile_Pages/Horizotal_tabs";
-import { FaMedal, FaPlus, FaArrowLeft, FaEnvelope } from "react-icons/fa";
+import { FaMedal, FaPlus, FaEnvelope } from "react-icons/fa"; // 🔹 FaArrowLeft removed
 
 const LEVELS = [
   { level: 0, requiredPoints: 0 },
@@ -30,9 +30,6 @@ const Profile = () => {
   const [postCount, setPostCount] = useState(0);
   const navigate = useNavigate();
 
-  // ---------------------------
-  // Firestore Subscriptions
-  // ---------------------------
   useEffect(() => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -63,7 +60,6 @@ const Profile = () => {
       }
     );
 
-    // real‑time post count listener
     const postsQuery = query(
       collection(db, "posts"),
       where("userId", "==", currentUser.uid)
@@ -79,9 +75,6 @@ const Profile = () => {
     };
   }, []);
 
-  // ---------------------------
-  // Progress Bar Animation
-  // ---------------------------
   useEffect(() => {
     if (!sticks) return;
     const points = sticks.points || 0;
@@ -94,8 +87,8 @@ const Profile = () => {
     );
     const targetProgress = nextLevel
       ? ((points - currentLevel.requiredPoints) /
-          (nextLevel.requiredPoints - currentLevel.requiredPoints)) *
-        100
+        (nextLevel.requiredPoints - currentLevel.requiredPoints)) *
+      100
       : 100;
 
     let start = 0;
@@ -113,9 +106,6 @@ const Profile = () => {
     return () => cancelAnimationFrame(frame);
   }, [sticks]);
 
-  // ---------------------------
-  // Image Upload Logic
-  // ---------------------------
   const convertToBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -178,13 +168,11 @@ const Profile = () => {
   );
   const nextLevel = LEVELS.find((lvl) => lvl.level === currentLevel.level + 1);
 
-  // ---------------------------
-  // JSX BELOW
-  // ---------------------------
   return (
     <>
       {/* MOBILE VIEW */}
-      <div className="md:hidden min-h-screen w-full flex flex-col items-center text-black pt-[90px] bg-blue-500 rounded-t-3xl">
+      {/* 🔹 Changed bg-blue-500 to bg-transparent */}
+      <div className="md:hidden min-h-screen w-full flex flex-col items-center text-black pt-[90px] bg-transparent rounded-t-3xl">
         <input
           id="profile-image-input"
           type="file"
@@ -193,12 +181,9 @@ const Profile = () => {
           style={{ display: "none" }}
         />
 
-        <div className="relative w-full h-56 bg-blue-500 rounded-b-[50px] flex items-center justify-between px-6">
-          <FaArrowLeft
-            className="text-white text-xl cursor-pointer"
-            onClick={() => navigate(-1)}
-          />
-         
+        {/* 🔹 Removed entire FaArrowLeft back button */}
+        <div className="relative w-full h-56 bg-transparent rounded-b-[50px] flex items-center justify-between px-6">
+          {/* Back arrow removed here */}
         </div>
 
         <div className="relative w-full max-w-sm -mt-24 bg-white rounded-t-3xl rounded-b-3xl shadow-lg flex flex-col items-center px-6 pt-20 pb-10 min-h-screen">
@@ -223,14 +208,12 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Username */}
           <div className="mt-4 text-center">
             <h2 className="font-bold text-gray-900 text-lg">
               @{user.name ? user.name : user.username || "User"}
             </h2>
           </div>
 
-          {/* Stats */}
           <div className="flex justify-center w-full mt-4 text-center gap-8">
             <div className="flex flex-col text-gray-800">
               <span className="font-semibold text-lg">{user.postCount}</span>
@@ -250,7 +233,6 @@ const Profile = () => {
             </Link>
           </div>
 
-          {/* Buttons Mobile */}
           <div className="flex justify-center items-center gap-3 mt-4 w-full">
             <button
               onClick={triggerFileInput}
@@ -277,7 +259,6 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* Level box */}
           <div className="mt-6 w-full bg-white border rounded-xl shadow-sm p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-500 text-white font-bold">
@@ -321,7 +302,7 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* DESKTOP VIEW */}
+      {/* DESKTOP VIEW — unchanged */}
       <div className="hidden md:block min-h-screen bg-white text-black pt-[90px] px-10 lg:px-24">
         <input
           id="profile-image-input"
@@ -368,7 +349,6 @@ const Profile = () => {
                 Edit Profile
               </button>
 
-              {/* Civic Impact button added for desktop */}
               <button
                 onClick={() => navigate("/championship")}
                 className="flex flex-col justify-center items-center bg-gray-100 rounded-md hover:bg-gray-200 transition px-4 py-1 border border-gray-300 text-sm shadow-inner"
@@ -422,7 +402,6 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Horizontal Tabs */}
         <HorizontalTabs />
       </div>
     </>

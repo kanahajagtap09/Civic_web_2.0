@@ -40,12 +40,12 @@ const getUserData = async (userId) => {
         userRole: data.userRole || "user",
         photoURL:
           data.profileImage &&
-          (data.profileImage.startsWith("http") ||
-            data.profileImage.startsWith("data:"))
+            (data.profileImage.startsWith("http") ||
+              data.profileImage.startsWith("data:"))
             ? data.profileImage
             : data.profileImage
-            ? `data:image/jpeg;base64,${data.profileImage}`
-            : "/default-avatar.png",
+              ? `data:image/jpeg;base64,${data.profileImage}`
+              : "/default-avatar.png",
       };
     }
   } catch (err) {
@@ -157,13 +157,12 @@ const Navbar = () => {
       <nav
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => !showSearch && setHovered(false)}
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto transition-all duration-300 ease-in-out z-50 shadow-lg ${
-          hovered
+        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out z-50 shadow-lg ${hovered
             ? showSearch
               ? "w-[360px]"
               : "w-[260px]"
             : "w-[64px]"
-        }`}
+          }`}
       >
         {/* Logo */}
         <Link
@@ -172,9 +171,8 @@ const Navbar = () => {
           className="mb-8 pl-2 flex items-center justify-center"
         >
           <h1
-            className={`text-2xl font-bold transition-opacity ${
-              hovered ? "opacity-100" : "opacity-0"
-            }`}
+            className={`text-2xl font-bold transition-opacity ${hovered ? "opacity-100" : "opacity-0"
+              }`}
           >
             CIVIC
           </h1>
@@ -257,7 +255,7 @@ const Navbar = () => {
                     <img
                       src={
                         currentProfileImage.startsWith("data:") ||
-                        currentProfileImage.startsWith("http")
+                          currentProfileImage.startsWith("http")
                           ? currentProfileImage
                           : `data:image/jpeg;base64,${currentProfileImage}`
                       }
@@ -300,9 +298,8 @@ const Navbar = () => {
 
             <button
               onClick={() => setShowMore(!showMore)}
-              className={`flex items-center p-3 rounded-lg hover:bg-gray-100 ${
-                showMore ? "bg-gray-100" : ""
-              }`}
+              className={`flex items-center p-3 rounded-lg hover:bg-gray-100 ${showMore ? "bg-gray-100" : ""
+                }`}
             >
               <BiMenu size={24} className="mr-4" />
               {hovered && <span>More</span>}
@@ -343,9 +340,8 @@ const NavItem = ({ to, icon, text, active, visible, onClick }) => (
   <Link
     to={to}
     onClick={onClick}
-    className={`flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors ${
-      active ? "font-bold bg-gray-100" : ""
-    }`}
+    className={`flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors ${active ? "font-bold bg-gray-100" : ""
+      }`}
   >
     <span className="mr-4 flex-shrink-0">{icon}</span>
     {visible && <span className="whitespace-nowrap">{text}</span>}
