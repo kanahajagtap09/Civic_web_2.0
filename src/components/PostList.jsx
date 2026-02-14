@@ -400,7 +400,7 @@ export default function PostList() {
 
                   {/* Geo info below image */}
                   {post.geoData && (
-                    <div className="w-full bg-black/80 text-white text-xs sm:text-sm p-3 flex items-start gap-2 rounded-b-2xl mt-1">
+                    <div className="w-full bg-black/80 text-white text-xs sm:text-sm p-3 flex items-start gap-2 rounded-b-2xl">
                       <div className="flex-shrink-0 w-12 h-12 bg-gray-300 overflow-hidden rounded-md">
                         <img
                           src={geotagphoto}

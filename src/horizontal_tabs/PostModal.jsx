@@ -13,14 +13,15 @@ import { formatDistanceToNow } from "date-fns";
 
 const modalStyle = {
   position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
+  top: { xs: 0, sm: "50%" },
+  left: { xs: 0, sm: "50%" },
+  transform: { xs: "none", sm: "translate(-50%, -50%)" },
   bgcolor: "background.paper",
-  borderRadius: 3,
+  borderRadius: { xs: 0, sm: 3 },
   boxShadow: 24,
-  width: { xs: "95vw", sm: 400 },
-  maxHeight: "90vh",
+  width: { xs: "100%", sm: 400 },
+  height: { xs: "100%", sm: "auto" },
+  maxHeight: { xs: "100vh", sm: "90vh" },
   outline: "none",
   display: "flex",
   flexDirection: "column",
@@ -119,12 +120,12 @@ export default function PostModal({ open, handleClose, post }) {
         </div>
 
         {/* Image */}
-        <div className="relative bg-black flex justify-center items-center">
+        <div className="relative bg-black flex justify-center items-center flex-1 sm:flex-none sm:h-auto">
           {post.imageUrl && (
             <img
               src={post.imageUrl}
               alt="Post"
-              className="w-full max-h-[400px] object-contain bg-black"
+              className="w-full h-full sm:max-h-[400px] object-contain bg-black"
             />
           )}
           {post.geoData && (

@@ -71,7 +71,7 @@ const trophyColor = (rank) => {
 
 export default function Home() {
   const [leaderboard, setLeaderboard] = useState([]);
-  const [activeTab, setActiveTab] = useState("feed"); // "feed" | "rankings"
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
 
@@ -140,92 +140,11 @@ export default function Home() {
               display: none;
             }
           `}</style>
-          {isMobile && (
-            <div className="flex w-full bg-white border-b border-gray-100 z-10 sticky top-0">
-              <button
-                onClick={() => setActiveTab("feed")}
-                className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === "feed"
-                  ? "text-black border-b-2 border-black"
-                  : "text-gray-400"
-                  }`}
-              >
-                Feed
-              </button>
-              <button
-                onClick={() => setActiveTab("rankings")}
-                className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === "rankings"
-                  ? "text-black border-b-2 border-black"
-                  : "text-gray-400"
-                  }`}
-              >
-                Championship
-              </button>
-            </div>
-          )}
 
-          {(!isMobile || activeTab === "feed") && (
-            <div className="w-full max-w-2xl pt-4 md:pt-8 px-0 md:px-0">
-              <PostList />
-            </div>
-          )}
+          <div className="w-full max-w-2xl pt-4 md:pt-8 px-0 md:px-0">
+            <PostList />
+          </div>
 
-          {isMobile && activeTab === "rankings" && (
-            <div className="w-full px-4 pt-4 pb-20">
-              {/* Leaderboard Mobile View */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-gray-800">Leaderboard</h3>
-                  <span className="text-gray-400 text-xs">Top Players</span>
-                </div>
-                {leaderboard.length > 0 ? (
-                  <div className="flex flex-col gap-2">
-                    {leaderboard.map((p, index) => {
-                      const rank = index + 1;
-                      return (
-                        <div
-                          key={p.uid}
-                          className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                        >
-                          <div className="flex items-center gap-3">
-                            {rank <= 3 ? (
-                              <FaTrophy
-                                className={`${trophyColor(rank)} text-lg`}
-                              />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 text-xs font-bold">
-                                {rank}
-                              </div>
-                            )}
-                            <img
-                              src={p.photoURL}
-                              alt={p.name}
-                              className="w-8 h-8 rounded-full border border-gray-200 object-cover"
-                            />
-                            <div>
-                              <p className="text-sm font-semibold text-gray-700">
-                                {p.name}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                L{p.level} • {p.badge}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {p.points.toLocaleString()}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-10 text-gray-500">
-                    <FaTrophy className="mx-auto mb-2 text-2xl text-gray-400" />
-                    <p>No champions yet. Be the first!</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 🧱 RIGHT SIDEBAR (Sticky Section) */}

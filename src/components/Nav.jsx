@@ -18,11 +18,9 @@ import {
 } from "react-icons/bi";
 import { MdOutlineExplore } from "react-icons/md";
 import { FiMapPin } from "react-icons/fi";
-import { AcademicCapIcon } from "@heroicons/react/24/outline";
-import { AcademicCapIcon as AcademicCapIconSolid } from "@heroicons/react/24/solid";
-import { FaTimes, FaSearch } from "react-icons/fa";
 import verifyTick from "../assets/Blue_tick.png";
 import PostCreatorModal from "./PostCreatorModal";
+import { FaTimes, FaSearch } from "react-icons/fa";
 
 /* ------------------ Utility ------------------ */
 const getUserData = async (userId) => {
@@ -72,12 +70,10 @@ const Navbar = () => {
   const [hovered, setHovered] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [realtimeUser, setRealtimeUser] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [searchUsers, setSearchUsers] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
 
-  /* ---------- 🔁 Listen for latest user image ---------- */
   useEffect(() => {
     if (user?.uid) {
       const off = onSnapshot(doc(db, "users", user.uid), (snap) => {
@@ -100,7 +96,6 @@ const Navbar = () => {
     user?.photoURL ||
     "/default-profile.png";
 
-  // ---- nav interaction helpers ----
   const handleNavClick = () => setHovered(false);
   const handleSearchClick = () => {
     setShowSearch(true);
@@ -112,10 +107,9 @@ const Navbar = () => {
     setSearchUsers([]);
   };
 
-  /* ------------- Debounced Firestore Search ------------- */
+  /* Debounced Firestore user lookup */
   useEffect(() => {
     let active = true;
-
     const fetchUsers = async () => {
       if (!searchQuery.trim()) {
         setSearchUsers([]);
@@ -132,8 +126,8 @@ const Navbar = () => {
             all.filter((u) =>
               [u.username, u.displayName, u.bio]
                 .filter(Boolean)
-                .some((field) =>
-                  field.toLowerCase().includes(searchQuery.toLowerCase())
+                .some((f) =>
+                  f.toLowerCase().includes(searchQuery.toLowerCase())
                 )
             )
           );
@@ -143,7 +137,6 @@ const Navbar = () => {
       }
       setLoadingSearch(false);
     };
-
     const t = setTimeout(fetchUsers, 400);
     return () => {
       active = false;
@@ -154,14 +147,21 @@ const Navbar = () => {
   /* ---------------- JSX ---------------- */
   return (
     <>
+      {showSearch && hovered && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+          onClick={handleBackClick}
+        />
+      )}
+
       <nav
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => !showSearch && setHovered(false)}
-        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 px-3 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out z-50 shadow-lg ${hovered
-            ? showSearch
-              ? "w-[360px]"
-              : "w-[260px]"
-            : "w-[64px]"
+        className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-300 flex flex-col py-6 overflow-y-auto overflow-x-hidden transition-all duration-300 z-50 shadow-lg ${hovered
+          ? showSearch
+            ? "w-[400px] p-0 border-none rounded-none" // 🔹 flat right border now
+            : "w-[260px] px-3"
+          : "w-[64px] px-3"
           }`}
       >
         {/* Logo */}
@@ -181,6 +181,7 @@ const Navbar = () => {
 
         {/* --- Search panel or Nav icons --- */}
         {showSearch && hovered ? (
+          // Updated white theme SearchPanel
           <SearchPanel
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -213,20 +214,6 @@ const Navbar = () => {
               visible={hovered}
               onClick={handleNavClick}
             />
-            <NavItem
-              to="/championship"
-              icon={
-                location.pathname === "/championship" ? (
-                  <AcademicCapIconSolid className="w-6 h-6" />
-                ) : (
-                  <AcademicCapIcon className="w-6 h-6" />
-                )
-              }
-              text="Championship"
-              active={location.pathname === "/championship"}
-              visible={hovered}
-              onClick={handleNavClick}
-            />
             {user && (
               <NavButton
                 onClick={() => setIsModalOpen(true)}
@@ -246,7 +233,7 @@ const Navbar = () => {
               />
             </div>
 
-            {/* --- Profile section bottom --- */}
+            {/* profile/login */}
             {user ? (
               <div className="mt-auto">
                 <NavItem
@@ -304,7 +291,6 @@ const Navbar = () => {
               <BiMenu size={24} className="mr-4" />
               {hovered && <span>More</span>}
             </button>
-
             {showMore && hovered && (
               <div className="ml-2 space-y-1">
                 <NavItem
@@ -358,7 +344,7 @@ const NavButton = ({ onClick, icon, text, visible }) => (
   </button>
 );
 
-/* --- Extracted search panel for clarity --- */
+/* --- Search Panel (Light White Theme) --- */
 const SearchPanel = ({
   searchQuery,
   setSearchQuery,
@@ -366,79 +352,198 @@ const SearchPanel = ({
   searchUsers,
   loadingSearch,
   navigate,
-}) => (
-  <div className="flex flex-col h-full px-1">
-    <div className="flex items-center mb-4">
-      <button
-        onClick={handleBackClick}
-        className="flex items-center p-3 hover:bg-gray-100 rounded-lg"
-      >
-        <FaTimes className="text-gray-600 mr-2" />
-        <span className="text-gray-700 font-medium">Close</span>
-      </button>
-    </div>
-    <div className="flex items-center bg-gray-100 border rounded-full px-3 py-2 mb-4">
-      <FaSearch className="text-gray-500 mr-2" />
-      <input
-        type="text"
-        placeholder="Search users..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="bg-transparent flex-1 outline-none text-sm text-gray-800 placeholder-gray-400"
-        autoFocus
-      />
-      {searchQuery && (
-        <button
-          onClick={() => setSearchQuery("")}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <FaTimes />
-        </button>
-      )}
-    </div>
-    <div className="flex-1 overflow-y-auto">
-      {/* results */}
-      {searchQuery.trim() === "" ? (
-        <p className="text-gray-400 text-sm text-center p-3">
-          Start typing to search users 🔍
-        </p>
-      ) : loadingSearch ? (
-        <p className="p-3 text-gray-500 text-sm">Searching...</p>
-      ) : searchUsers.length === 0 ? (
-        <div className="text-center py-4 text-gray-500 text-sm">
-          No users found for <span className="font-semibold">"{searchQuery}"</span>
+}) => {
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const stored = localStorage.getItem("recentSearches");
+      return stored ? JSON.parse(stored).filter((u) => u && u.id) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("recentSearches", JSON.stringify(recentSearches));
+  }, [recentSearches]);
+
+  const handleUserClick = (user) => {
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((u) => u.id !== user.id);
+      return [user, ...filtered].slice(0, 10);
+    });
+    navigate(`/search-user/${user.id}`);
+    handleBackClick();
+  };
+
+  const removeRecent = (e, userId) => {
+    e.stopPropagation();
+    setRecentSearches((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const clearAllRecent = () => setRecentSearches([]);
+
+  return (
+    <div className="flex flex-col h-full w-full bg-white text-gray-800 absolute top-0 left-0 z-50 shadow-2xl transition-all duration-300">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Search</h2>
+          <button
+            onClick={handleBackClick}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FaTimes size={20} />
+          </button>
         </div>
-      ) : (
-        <ul>
-          {searchUsers.map((u) => (
-            <li
-              key={u.id}
-              onClick={() => {
-                navigate(`/search-user/${u.id}`);
-                handleBackClick();
-              }}
-              className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer rounded-lg"
+
+        {/* Search Input */}
+        <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2">
+          <FaSearch className="text-gray-500 mr-3" />
+          <input
+            type="text"
+            placeholder="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-transparent flex-1 outline-none text-sm text-gray-700 placeholder-gray-500"
+            autoFocus
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-gray-500 hover:text-gray-700 ml-2"
             >
-              <img
-                src={u.photoURL}
-                alt={u.username}
-                className="w-10 h-10 rounded-full object-cover border"
-              />
-              <div className="ml-3 flex flex-col">
-                <span className="font-semibold text-sm">{u.username}</span>
-                {u.displayName && (
-                  <span className="text-xs text-gray-500">{u.displayName}</span>
-                )}
-                {u.bio && (
-                  <span className="text-xs text-gray-400 truncate">{u.bio}</span>
-                )}
+              <FaTimes size={14} className="rounded-full p-0.5 w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-2 py-2">
+        {loadingSearch && (
+          <div className="space-y-3 mt-2 px-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-2 bg-gray-200 rounded w-1/4"></div>
+                </div>
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        )}
+
+        {/* Results */}
+        {!loadingSearch && searchQuery.trim() !== "" && (
+          <ul>
+            {searchUsers.length === 0 ? (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                No results found.
+              </div>
+            ) : (
+              searchUsers.map((u) => (
+                <li
+                  key={u.id}
+                  onClick={() => handleUserClick(u)}
+                  className="flex items-center justify-between px-3 py-3 hover:bg-gray-100 cursor-pointer rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={u.photoURL}
+                      alt={u.username}
+                      className="w-11 h-11 rounded-full object-cover border border-gray-300"
+                    />
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-sm">
+                          {u.username}
+                        </span>
+                        {u.verified && (
+                          <img
+                            src={verifyTick}
+                            className="w-3 h-3"
+                            alt="verified"
+                          />
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {u.displayName || u.username}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
+        {/* Recent */}
+        {!loadingSearch && searchQuery.trim() === "" && (
+          <div className="mt-2 text-gray-800">
+            <div className="flex justify-between items-center px-3 mb-2">
+              <h3 className="text-base font-semibold">Recent</h3>
+              {recentSearches.length > 0 && (
+                <button
+                  onClick={clearAllRecent}
+                  className="text-xs text-blue-500 hover:text-blue-400 font-semibold"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {recentSearches.length === 0 ? (
+              <div className="h-32 flex items-center justify-center text-gray-400 text-sm">
+                No recent searches.
+              </div>
+            ) : (
+              <ul>
+                {recentSearches.map((u) => (
+                  <li
+                    key={u.id}
+                    onClick={() => handleUserClick(u)}
+                    className="flex items-center justify-between px-3 py-3 hover:bg-gray-100 cursor-pointer rounded-lg group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={u.photoURL}
+                        alt={u.username}
+                        className="w-11 h-11 rounded-full object-cover border border-gray-300"
+                      />
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-sm">
+                            {u.username}
+                          </span>
+                          {u.verified && (
+                            <img
+                              src={verifyTick}
+                              className="w-3 h-3"
+                              alt="verified"
+                            />
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {u.displayName || u.username}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => removeRecent(e, u.id)}
+                      className="text-gray-400 hover:text-gray-700 p-2"
+                    >
+                      <FaTimes size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default Navbar;

@@ -42,9 +42,13 @@ const AppLayout = ({ isMobile }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ Hide navs only on login/signup pages
-  const authRoutes = ["/login", "/signup"];
-  const hideNavs = authRoutes.includes(location.pathname);
+  // ✅ Hide navs on auth pages AND specific sub-pages (updates, details, etc.)
+  const hideNavRoutes = [
+    "/login",
+    "/signup",
+    "/updates",
+  ];
+  const hideNavs = hideNavRoutes.some(route => location.pathname.startsWith(route)) || location.pathname.startsWith("/details/");
 
   return (
     <div className="flex min-h-screen bg-gray-50">
