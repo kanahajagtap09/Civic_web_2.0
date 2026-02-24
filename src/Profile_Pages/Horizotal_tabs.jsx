@@ -180,9 +180,8 @@ const CalendarStreak = () => {
                     <WhatshotIcon sx={{ color: "orange", fontSize: 22 }} />
                   ) : (
                     <span
-                      className={`text-sm ${
-                        isToday ? "text-blue-600 font-bold" : ""
-                      }`}
+                      className={`text-sm ${isToday ? "text-blue-600 font-bold" : ""
+                        }`}
                     >
                       {day}
                     </span>
@@ -301,10 +300,21 @@ const PostGrid = () => {
 // ---------------------------------------------------
 // Main HorizontalTabs container
 // ---------------------------------------------------
-export default function HorizontalTabs() {
+export default function HorizontalTabs({ desktopCalendarOnly = false, desktopPostsOnly = false }) {
   const [value, setValue] = React.useState(0);
   const handleChange = (_, val) => setValue(val);
 
+  // Desktop left column: calendar/streak only
+  if (desktopCalendarOnly) {
+    return <CalendarStreak />;
+  }
+
+  // Desktop right column: post grid only (no tabs, no calendar)
+  if (desktopPostsOnly) {
+    return <PostGrid />;
+  }
+
+  // Mobile / default: full tabs
   return (
     <Box sx={{ width: "100%", maxWidth: 1040, mx: "auto", mt: 2 }}>
       <Tabs

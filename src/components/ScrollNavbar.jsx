@@ -122,10 +122,9 @@ const ScrollNavbar = () => {
                   key={item.path}
                   onClick={() => navigate(item.path)}
                   className={`relative group px-3 py-2 rounded-xl transition-all duration-200 text-sm
-                    ${
-                      isActive(item.path)
-                        ? `bg-[${blue}]/10 text-[${blue}] font-semibold`
-                        : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+                    ${isActive(item.path)
+                      ? `bg-[${blue}]/10 text-[${blue}] font-semibold`
+                      : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -168,10 +167,9 @@ const ScrollNavbar = () => {
             <button
               onClick={() => navigate("/updates")}
               className={`relative group px-3 py-2 rounded-xl transition-all duration-200 text-sm
-                ${
-                  isActive("/updates")
-                    ? `bg-[${blue}]/10 text-[${blue}] font-semibold`
-                    : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+                ${isActive("/updates")
+                  ? `bg-[${blue}]/10 text-[${blue}] font-semibold`
+                  : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
                 }`}
             >
               <div className="flex items-center gap-2">

@@ -61,7 +61,7 @@ const AppLayout = ({ isMobile }) => {
       <main
         className={`
           flex-1 
-          ${isMobile && !hideNavs && user ? "pb-14" : ""} 
+          ${isMobile && !hideNavs && user ? "pt-20 pb-20" : ""} 
           ${!isMobile && !hideNavs && user ? "ml-[64px]" : ""}
           overflow-x-hidden
         `}
@@ -73,7 +73,7 @@ const AppLayout = ({ isMobile }) => {
           className={`
             w-full
             min-h-screen
-            ${isMobile ? "px-0 pb-16" : ""} 
+            ${isMobile ? "px-0" : ""} 
           `}
         >
           {/* Mobile bottom navbar - only show when logged in and not on auth pages */}
