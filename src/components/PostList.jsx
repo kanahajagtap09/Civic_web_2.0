@@ -29,7 +29,7 @@ import {
   FaSpinner as FaProgress,
   FaCheckCircle,
 } from "react-icons/fa";
-import SuggestionsBar from "./Sugestionbar";
+
 import { useNavigate } from "react-router-dom";
 import geotagphoto from "../assets/geotagMapphoto.webp";
 import ScrollNavbar from "./ScrollNavbar";
@@ -198,11 +198,7 @@ export default function PostList({ posts: propPosts }) {
         className={`${isMobile ? "w-full mt-0 p-0" : "max-w-lg mx-auto mt-6 p-3 rounded-xl"} min-h-screen ${isMobile ? "" : "space-y-6"
           }`}
       >
-        {!propPosts && (
-          <div id="first-section">
-            <SuggestionsBar />
-          </div>
-        )}
+
 
         {posts.map((post) => {
           const liked = post.likes?.includes(currentUserId);

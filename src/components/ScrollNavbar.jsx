@@ -18,11 +18,13 @@ import {
 } from "@heroicons/react/24/solid";
 
 const ScrollNavbar = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [notifications, setNotifications] = useState(2);
   const [username, setUsername] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 697);
+  const [scrollDirection, setScrollDirection] = useState("up");
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,16 +51,23 @@ const ScrollNavbar = () => {
     }
   }, [uid, location.pathname]);
 
-  // ✅ Scroll visibility and progress
+  // ✅ Scroll visibility and progress with direction detection
   useEffect(() => {
     const handleScroll = () => {
-      const firstSection = document.getElementById("first-section");
-      if (firstSection) {
-        const bottom = firstSection.offsetTop + firstSection.offsetHeight;
-        setIsVisible(window.scrollY > bottom);
-      } else {
+      const currentScrollY = window.scrollY;
+
+      // Detect scroll direction - hide when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down
+        setScrollDirection("down");
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setScrollDirection("up");
         setIsVisible(true);
       }
+
+      setLastScrollY(currentScrollY);
 
       const winScroll =
         document.body.scrollTop || document.documentElement.scrollTop;
@@ -69,9 +78,8 @@ const ScrollNavbar = () => {
     };
 
     window.addEventListener("scroll", handleScroll);
-    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [lastScrollY]);
 
   const handleLogout = async () => {
     try {

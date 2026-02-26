@@ -27,7 +27,6 @@ import {
   FaPlay,
 } from "react-icons/fa";
 import verifyTick from "../assets/Blue_tick.png";
-import PostModal from "../horizontal_tabs/PostModal";
 
 // ---------- helper to fetch simple user meta ----------
 const getUserData = async (userId) => {
@@ -43,8 +42,8 @@ const getUserData = async (userId) => {
           profileImage?.startsWith("data:") || profileImage?.startsWith("http")
             ? profileImage
             : profileImage
-            ? `data:image/jpeg;base64,${profileImage}`
-            : "/default-avatar.png",
+              ? `data:image/jpeg;base64,${profileImage}`
+              : "/default-avatar.png",
       };
     }
   } catch (err) {
@@ -287,11 +286,10 @@ export default function UserProfileSearching() {
             <button
               onClick={toggleFollow}
               disabled={btnLoading}
-              className={`mt-4 px-5 py-2 rounded-xl text-sm font-semibold ${
-                isFollowing
-                  ? "bg-gray-100 border border-gray-300"
-                  : "bg-blue-500 text-white"
-              }`}
+              className={`mt-4 px-5 py-2 rounded-xl text-sm font-semibold ${isFollowing
+                ? "bg-gray-100 border border-gray-300"
+                : "bg-blue-500 text-white"
+                }`}
             >
               {btnLoading ? "..." : isFollowing ? "Following" : "Follow"}
             </button>
@@ -333,11 +331,10 @@ export default function UserProfileSearching() {
                 <button
                   onClick={toggleFollow}
                   disabled={btnLoading}
-                  className={`px-4 py-[6px] rounded-md text-sm ${
-                    isFollowing
-                      ? "bg-gray-100 border border-gray-300"
-                      : "bg-blue-500 text-white"
-                  }`}
+                  className={`px-4 py-[6px] rounded-md text-sm ${isFollowing
+                    ? "bg-gray-100 border border-gray-300"
+                    : "bg-blue-500 text-white"
+                    }`}
                 >
                   {btnLoading ? "..." : isFollowing ? "Following" : "Follow"}
                 </button>
@@ -372,12 +369,6 @@ export default function UserProfileSearching() {
           )}
         </div>
       </div>
-
-      <PostModal
-        open={!!selectedPost}
-        handleClose={() => setSelectedPost(null)}
-        post={selectedPost}
-      />
     </div>
   );
 }

@@ -19,7 +19,7 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
-import PostModal from "../horizontal_tabs/PostModal";
+import PostModal from "../Explore/ExploreModel/Postmodel";
 
 // ---------------------------------------------------
 // CalendarStreak component (unchanged)
@@ -29,7 +29,16 @@ const CalendarStreak = () => {
   const [year, setYear] = React.useState(today.getFullYear());
   const [month, setMonth] = React.useState(today.getMonth());
   const [streakData, setStreakData] = React.useState(null);
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 697);
   const { user } = useAuth();
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 697);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   React.useEffect(() => {
     if (!user) return;
@@ -95,30 +104,39 @@ const CalendarStreak = () => {
       {streakData && (
         <Box
           sx={{
-            p: 2,
+            p: isMobile ? 1.5 : 2,
             borderBottom: "1px solid #eee",
             display: "flex",
             justifyContent: "space-around",
             bgcolor: "#fafafa",
+            gap: isMobile ? 1 : 2,
           }}
         >
           <div className="flex flex-col items-center">
-            <div className="text-2xl font-bold flex items-center gap-1">
-              {streakData.currentStreak} <WhatshotIcon sx={{ color: "orange" }} />
+            <div className={`flex items-center gap-1 ${isMobile ? "text-lg" : "text-2xl"} font-bold`}>
+              {streakData.currentStreak}
+              <WhatshotIcon sx={{ color: "orange", fontSize: isMobile ? 18 : 24 }} />
             </div>
-            <div className="text-xs text-gray-600">Current Streak</div>
+            <div className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-600 text-center`}>
+              Current Streak
+            </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="text-2xl font-bold flex items-center gap-1">
-              {streakData.longestStreak} <WhatshotIcon sx={{ color: "orange" }} />
+            <div className={`flex items-center gap-1 ${isMobile ? "text-lg" : "text-2xl"} font-bold`}>
+              {streakData.longestStreak}
+              <WhatshotIcon sx={{ color: "orange", fontSize: isMobile ? 18 : 24 }} />
             </div>
-            <div className="text-xs text-gray-600">Longest Streak</div>
+            <div className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-600 text-center`}>
+              Longest Streak
+            </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="text-2xl font-bold">
+            <div className={`${isMobile ? "text-lg" : "text-2xl"} font-bold`}>
               +{streakData.currentPostPoints || 0}
             </div>
-            <div className="text-xs text-gray-600">Points Today</div>
+            <div className={`${isMobile ? "text-[10px]" : "text-xs"} text-gray-600 text-center`}>
+              Points Today
+            </div>
           </div>
         </Box>
       )}
@@ -128,21 +146,32 @@ const CalendarStreak = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          p: 2,
+          p: isMobile ? 1.5 : 2,
           borderBottom: "1px solid #eee",
           bgcolor: "#fafafa",
+          gap: isMobile ? 1 : 2,
         }}
       >
         <ChevronLeftIcon
           onClick={handlePrev}
-          sx={{ cursor: "pointer", color: "text.secondary" }}
+          sx={{
+            cursor: "pointer",
+            color: "text.secondary",
+            fontSize: isMobile ? 20 : 24,
+            flexShrink: 0,
+          }}
         />
-        <span className="font-semibold">
+        <span className={`font-semibold whitespace-nowrap text-xs md:text-sm`}>
           {months[month]} {year}
         </span>
         <ChevronRightIcon
           onClick={handleNext}
-          sx={{ cursor: "pointer", color: "text.secondary" }}
+          sx={{
+            cursor: "pointer",
+            color: "text.secondary",
+            fontSize: isMobile ? 20 : 24,
+            flexShrink: 0,
+          }}
         />
       </Box>
 
@@ -150,8 +179,9 @@ const CalendarStreak = () => {
         sx={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 1,
-          p: 1,
+          gap: isMobile ? 0.5 : 1,
+          p: isMobile ? 1 : 2,
+          width: "100%",
         }}
       >
         {weeks.map((week, wi) =>
@@ -162,25 +192,27 @@ const CalendarStreak = () => {
               today.getMonth() === month &&
               today.getDate() === day;
             const isStreak = day && streakDays.includes(day);
+            const cellSize = isMobile ? 32 : 40;
             return (
               <Box
                 key={`${wi}-${di}`}
                 sx={{
-                  width: 40,
-                  height: 40,
+                  width: cellSize,
+                  height: cellSize,
                   borderRadius: "50%",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   border: isToday ? "2px solid #1976d2" : "none",
+                  margin: "0 auto",
                 }}
               >
                 {day ? (
                   isStreak ? (
-                    <WhatshotIcon sx={{ color: "orange", fontSize: 22 }} />
+                    <WhatshotIcon sx={{ color: "orange", fontSize: isMobile ? 16 : 22 }} />
                   ) : (
                     <span
-                      className={`text-sm ${isToday ? "text-blue-600 font-bold" : ""
+                      className={`text-xs md:text-sm ${isToday ? "text-blue-600 font-bold" : ""
                         }`}
                     >
                       {day}
@@ -235,12 +267,20 @@ const PostGrid = () => {
       orderBy("createdAt", "desc")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        likesCount: doc.data().likesCount || 0,
-        commentsCount: doc.data().commentsCount || 0,
-      }));
+      const data = snap.docs.map((doc) => {
+        const postData = doc.data();
+        return {
+          id: doc.id,
+          ...postData,
+          likesCount: postData.likesCount || 0,
+          commentsCount: postData.commentsCount || 0,
+          user: {
+            id: postData.userId || postData.uid || user?.uid,
+            username: postData.username || postData.displayName || user?.displayName || "User",
+            photoURL: postData.userPhoto || postData.photoURL || user?.photoURL || "/default-avatar.png",
+          }
+        };
+      });
       setPosts(data);
     });
     return () => unsub();
@@ -292,6 +332,8 @@ const PostGrid = () => {
         open={!!selectedPost}
         handleClose={() => setSelectedPost(null)}
         post={selectedPost}
+        posts={posts}
+        onPostChange={setSelectedPost}
       />
     </>
   );
@@ -300,17 +342,17 @@ const PostGrid = () => {
 // ---------------------------------------------------
 // Main HorizontalTabs container
 // ---------------------------------------------------
-export default function HorizontalTabs({ desktopCalendarOnly = false, desktopPostsOnly = false }) {
+export default function HorizontalTabs({ showCalendarOnly = false, showPostsOnly = false }) {
   const [value, setValue] = React.useState(0);
   const handleChange = (_, val) => setValue(val);
 
   // Desktop left column: calendar/streak only
-  if (desktopCalendarOnly) {
+  if (showCalendarOnly) {
     return <CalendarStreak />;
   }
 
   // Desktop right column: post grid only (no tabs, no calendar)
-  if (desktopPostsOnly) {
+  if (showPostsOnly) {
     return <PostGrid />;
   }
 
