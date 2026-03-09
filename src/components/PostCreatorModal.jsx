@@ -123,9 +123,8 @@ export default function PostCreatorModal({ isOpen, onClose }) {
 
   // --- Crop Logic with react-image-crop
   const getCroppedImg = () => {
-    if (!completedCrop || !imgRef.current) {
-      toast.error("Please adjust the crop area");
-      return null;
+    if (!completedCrop || !imgRef.current || completedCrop.width <= 0 || completedCrop.height <= 0) {
+      return originalImageData;
     }
 
     const image = imgRef.current;

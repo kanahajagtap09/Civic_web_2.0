@@ -322,7 +322,7 @@ export default function PostList({ posts: propPosts }) {
               </div>
 
               {/* ----- Action Bar ----- */}
-              <div className="flex items-center justify-between bg-white border-t border-gray-100 px-4 py-3 mt-auto text-gray-600">
+              <div className="flex items-center bg-white border-t border-gray-100 px-4 py-3 mt-auto text-gray-600">
                 <div className="flex gap-6 items-center text-lg">
                   <div
                     onClick={() => navigate(`/comments/${post.id}`)}
@@ -347,7 +347,6 @@ export default function PostList({ posts: propPosts }) {
                     </span>
                   </div>
                 </div>
-                <FaPaperPlane className="cursor-pointer hover:text-green-500" />
               </div>
             </div>
           );
