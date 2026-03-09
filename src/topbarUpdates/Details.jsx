@@ -386,10 +386,17 @@ export default function Details() {
       </div>
 
       {/* ── Two-column grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 max-w-7xl mx-auto">
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 max-w-7xl mx-auto lg:h-[calc(100vh-56px)] lg:overflow-hidden">
+        <style>{`
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
         {/* ════════════════════════ LEFT COLUMN (2/3) ════════════════════════ */}
-        <div className="lg:col-span-2 space-y-4">
+        <div
+          className="lg:col-span-2 space-y-4 lg:overflow-y-auto lg:pb-20 no-scrollbar"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
 
           {/* OVERVIEW */}
           <SectionCard title="Overview" icon={DocumentTextIcon} iconColor="text-[#782048]">
@@ -480,7 +487,10 @@ export default function Details() {
         </div>
 
         {/* ════════════════════════ RIGHT COLUMN (1/3) ════════════════════════ */}
-        <div className="space-y-4">
+        <div
+          className="space-y-4 lg:overflow-y-auto lg:pb-20 no-scrollbar"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
 
           {/* ISSUE IMAGE */}
           <SectionCard title="Issue Image" icon={PhotoIcon} iconColor="text-gray-500">
