@@ -283,32 +283,7 @@ const Navbar = () => {
               )
             )}
 
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className={`flex items-center p-3 rounded-lg hover:bg-gray-100 ${showMore ? "bg-gray-100" : ""
-                }`}
-            >
-              <BiMenu size={24} className="mr-4" />
-              {hovered && <span>More</span>}
-            </button>
-            {showMore && hovered && (
-              <div className="ml-2 space-y-1">
-                <NavItem
-                  to="/about"
-                  text="About"
-                  active={location.pathname === "/about"}
-                  visible={hovered}
-                  onClick={handleNavClick}
-                />
-                <NavItem
-                  to="/contact"
-                  text="Contact"
-                  active={location.pathname === "/contact"}
-                  visible={hovered}
-                  onClick={handleNavClick}
-                />
-              </div>
-            )}
+
           </div>
         )}
       </nav>

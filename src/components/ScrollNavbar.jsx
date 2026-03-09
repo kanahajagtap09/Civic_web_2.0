@@ -22,7 +22,7 @@ const ScrollNavbar = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [notifications, setNotifications] = useState(2);
   const [username, setUsername] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 697);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [scrollDirection, setScrollDirection] = useState("up");
   const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -34,7 +34,7 @@ const ScrollNavbar = () => {
 
   // ✅ Responsive resize check
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 697);
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -137,7 +137,7 @@ const ScrollNavbar = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Icon className="w-5 h-5" />
-                    <span className="hidden sm:block">{item.label}</span>
+                    <span className="hidden md:block">{item.label}</span>
                   </div>
                 </button>
               );
@@ -166,7 +166,7 @@ const ScrollNavbar = () => {
           {/* RIGHT NAV */}
           <div className="flex items-center gap-2">
             {location.pathname.startsWith("/profile") && username && (
-              <span className="hidden sm:block font-semibold text-gray-800 mr-2">
+              <span className="hidden md:block font-semibold text-gray-800 mr-2">
                 @{username}
               </span>
             )}
@@ -186,7 +186,7 @@ const ScrollNavbar = () => {
                 ) : (
                   <MegaphoneIcon className="w-5 h-5" />
                 )}
-                <span className="hidden sm:block">Updates</span>
+                <span className="hidden md:block">Updates</span>
               </div>
               {notifications > 0 && (
                 <div
@@ -213,7 +213,7 @@ const ScrollNavbar = () => {
                   className="w-5 h-5 text-[oklch(62.3%_0.214_259.815)] group-hover:text-white transition-colors duration-300"
                 />
                 <span
-                  className="hidden sm:block font-medium transition-colors duration-300"
+                  className="hidden md:block font-medium transition-colors duration-300"
                   style={{
                     color: `oklch(62.3%_0.214_259.815)`,
                   }}
