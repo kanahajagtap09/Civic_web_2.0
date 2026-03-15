@@ -29,14 +29,14 @@ import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 // Helpers / config
 // ─────────────────────────────────────────────
 const STATUS_MAP = {
-  pending: { label: "Pending", color: "bg-amber-100 text-amber-700 border-amber-300", step: 0 },
-  approved: { label: "Approved", color: "bg-green-100 text-green-700 border-green-300", step: 1 },
+  verifying: { label: "Verifying", color: "bg-amber-100 text-amber-700 border-amber-300", step: 0 },
+  forwarding: { label: "Forwarding", color: "bg-green-100 text-green-700 border-green-300", step: 1 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-300", step: 1 },
   assigned: { label: "Assigned", color: "bg-blue-100 text-blue-700 border-blue-300", step: 2 },
   "working progress": { label: "Working Progress", color: "bg-violet-100 text-violet-700 border-violet-300", step: 3 },
   completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700 border-emerald-300", step: 4 },
   accepted: { label: "Accepted", color: "bg-teal-100 text-teal-700 border-teal-300", step: 5 },
-  abandoned: { label: "Abandoned", color: "bg-gray-100 text-gray-600 border-gray-300", step: 6 },
+  escalated: { label: "Escalated", color: "bg-gray-100 text-gray-600 border-gray-300", step: 6 },
 };
 
 const PRIORITY_MAP = {
@@ -47,15 +47,15 @@ const PRIORITY_MAP = {
 };
 
 const STATUS_STEPS = [
-  { key: "pending", label: "Pending", icon: ExclamationCircleIcon },
-  { key: "approved", label: "Approved", icon: CheckCircleIcon },
+  { key: "verifying", label: "Verifying", icon: ExclamationCircleIcon },
+  { key: "forwarding", label: "Forwarding", icon: CheckCircleIcon },
   { key: "assigned", label: "Assigned", icon: UserGroupIcon },
   { key: "working progress", label: "Working Progress", icon: WrenchScrewdriverIcon },
   { key: "completed", label: "Completed", icon: CheckCircleIcon },
 ];
 
 function getStatusCfg(raw = "") {
-  return STATUS_MAP[raw.toLowerCase().trim()] || STATUS_MAP["pending"];
+  return STATUS_MAP[raw.toLowerCase().trim()] || STATUS_MAP["verifying"];
 }
 
 function fmtDate(val) {
@@ -216,7 +216,7 @@ function FullHistoryTimeline({ post }) {
     // Synthesize from status + createdAt
     const generated = [];
     generated.push({ status: "Issue Reported", date: post.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(), note: "Complaint filed via CIVIC." });
-    if (["approved", "assigned", "working progress", "completed", "accepted"].includes(post.status?.toLowerCase())) {
+    if (["forwarding", "assigned", "working progress", "completed", "accepted"].includes(post.status?.toLowerCase())) {
       const d = new Date((post.createdAt?.toDate?.() || new Date()).getTime() + 30 * 60000);
       generated.push({ status: "Under Review", date: d.toISOString(), note: "Admin acknowledged the report." });
     }

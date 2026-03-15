@@ -22,7 +22,7 @@ import {
 
 // 🟨 Quick links to Updates page
 const updates = [
-  { id: "trk-1", text: "Track your reported issues", status: "reported", filter: "Pending" },
+  { id: "trk-1", text: "Track your reported issues", status: "reported", filter: "Verifying" },
   { id: "trk-2", text: "Check issues in progress", status: "progress", filter: "Working Progress" },
   { id: "trk-3", text: "View resolved complaints", status: "resolved", filter: "Completed" },
 ];

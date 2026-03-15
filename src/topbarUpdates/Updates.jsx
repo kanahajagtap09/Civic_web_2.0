@@ -28,16 +28,16 @@ import { MegaphoneIcon, FunnelIcon, XMarkIcon } from "@heroicons/react/24/outlin
 // Status config
 // ──────────────────────────────────────────────
 const STATUS_CONFIG = {
-  pending: {
-    label: "Pending",
+  verifying: {
+    label: "Verifying",
     bg: "bg-amber-50",
     border: "border-amber-200",
     text: "text-amber-700",
     dot: "bg-amber-400",
     icon: <ExclamationCircleIcon className="w-5 h-5 text-amber-500" />,
   },
-  approved: {
-    label: "Approved",
+  forwarding: {
+    label: "Forwarding",
     bg: "bg-green-50",
     border: "border-green-200",
     text: "text-green-700",
@@ -84,8 +84,8 @@ const STATUS_CONFIG = {
     dot: "bg-teal-400",
     icon: <CheckCircleIcon className="w-5 h-5 text-teal-500" />,
   },
-  abandoned: {
-    label: "Abandoned",
+  escalated: {
+    label: "Escalated",
     bg: "bg-gray-50",
     border: "border-gray-200",
     text: "text-gray-600",
@@ -96,7 +96,7 @@ const STATUS_CONFIG = {
 
 const getStatus = (raw = "") => {
   const key = raw.toLowerCase().trim();
-  return STATUS_CONFIG[key] || STATUS_CONFIG["pending"];
+  return STATUS_CONFIG[key] || STATUS_CONFIG["verifying"];
 };
 
 // ──────────────────────────────────────────────
@@ -116,7 +116,7 @@ const DEMO_POSTS = [
     id: "demo-2",
     description: "Garbage accumulation in residential area causing health hazards. Multiple complaints already filed.",
     tags: ["#garbage", "#sanitation", "#health"],
-    status: "pending",
+    status: "verifying",
     geoData: { city: "Pune", region: "Maharashtra" },
     createdAt: { toDate: () => new Date(Date.now() - 5 * 3600000) },
     userId: "demo",
@@ -141,18 +141,18 @@ const DEMO_POSTS = [
   },
 ];
 
-const FILTER_OPTIONS = ["All", "Pending", "Approved", "Rejected", "Assigned", "Working Progress", "Completed", "Accepted", "Abandoned"];
+const FILTER_OPTIONS = ["All", "Verifying", "Forwarding", "Rejected", "Assigned", "Working Progress", "Completed", "Accepted", "Escalated"];
 
 const statusFilterMap = {
   All: null,
-  Pending: "pending",
-  Approved: "approved",
+  Verifying: "verifying",
+  Forwarding: "forwarding",
   Rejected: "rejected",
   Assigned: "assigned",
   "Working Progress": "working progress",
   Completed: "completed",
   Accepted: "accepted",
-  Abandoned: "abandoned",
+  Escalated: "escalated",
 };
 
 // ──────────────────────────────────────────────
@@ -243,12 +243,12 @@ export default function Updates() {
   const location = useLocation();
   const { user } = useContext(AuthContext);
 
-  const initialFilter = location.state?.filter || "All";
+  const initialFilter = location.state?.filter || "Verifying";
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState(initialFilter);
-  const [showFilters, setShowFilters] = useState(initialFilter !== "All");
+  const [showFilters, setShowFilters] = useState(initialFilter !== "Verifying" && initialFilter !== "All");
   const [usingDemo, setUsingDemo] = useState(false);
 
   // ── Real-time Firestore listener - Filter by current user ──
@@ -409,7 +409,7 @@ export default function Updates() {
             <p className="text-gray-500 font-medium">No issues found</p>
             <p className="text-gray-400 text-sm mt-1">Your reported issues will appear here</p>
             <button
-              onClick={() => { setSearch(""); setActiveFilter("All"); }}
+              onClick={() => { setSearch(""); setActiveFilter("Verifying"); }}
               className="mt-4 text-sm text-[#782048] font-semibold hover:underline"
             >
               Clear all filters
