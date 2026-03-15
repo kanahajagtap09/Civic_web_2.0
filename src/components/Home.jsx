@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { formatDistanceToNow } from "date-fns";
 import {
   ExclamationCircleIcon,
   WrenchScrewdriverIcon,
@@ -18,40 +20,80 @@ import {
   orderBy,
   getDocs,
   limit,
+  where,
+  onSnapshot,
 } from "firebase/firestore";
 
-// 🟨 Quick links to Updates page
-const updates = [
-  { id: "trk-1", text: "Track your reported issues", status: "reported", filter: "Verifying" },
-  { id: "trk-2", text: "Check issues in progress", status: "progress", filter: "Working Progress" },
-  { id: "trk-3", text: "View resolved complaints", status: "resolved", filter: "Completed" },
-];
-
-const statusConfig = {
-  reported: {
-    bg: "bg-orange-50",
-    border: "border-orange-200",
-    text: "text-orange-700",
-    icon: <ExclamationCircleIcon className="w-5 h-5 text-orange-500" />,
+const STATUS_CONFIG = {
+  verifying: {
+    label: "Verifying",
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    text: "text-amber-700",
+    dot: "bg-amber-400",
+    icon: <ExclamationCircleIcon className="w-5 h-5 text-amber-500" />,
   },
-  progress: {
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    text: "text-blue-700",
-    icon: <WrenchScrewdriverIcon className="w-5 h-5 text-blue-500" />,
-  },
-  resolved: {
+  forwarding: {
+    label: "Forwarding",
     bg: "bg-green-50",
     border: "border-green-200",
     text: "text-green-700",
+    dot: "bg-green-400",
     icon: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
   },
-  closed: {
+  rejected: {
+    label: "Rejected",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-400",
+    icon: <ExclamationCircleIcon className="w-5 h-5 text-red-500" />,
+  },
+  assigned: {
+    label: "Assigned",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    text: "text-blue-700",
+    dot: "bg-blue-400",
+    icon: <WrenchScrewdriverIcon className="w-5 h-5 text-blue-500" />,
+  },
+  "working progress": {
+    label: "Working Progress",
+    bg: "bg-violet-50",
+    border: "border-violet-200",
+    text: "text-violet-700",
+    dot: "bg-violet-400",
+    icon: <WrenchScrewdriverIcon className="w-5 h-5 text-violet-500" />,
+  },
+  completed: {
+    label: "Completed",
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    text: "text-emerald-700",
+    dot: "bg-emerald-400",
+    icon: <CheckCircleIcon className="w-5 h-5 text-emerald-500" />,
+  },
+  accepted: {
+    label: "Accepted",
+    bg: "bg-teal-50",
+    border: "border-teal-200",
+    text: "text-teal-700",
+    dot: "bg-teal-400",
+    icon: <CheckCircleIcon className="w-5 h-5 text-teal-500" />,
+  },
+  escalated: {
+    label: "Escalated",
     bg: "bg-gray-50",
     border: "border-gray-200",
     text: "text-gray-600",
-    icon: <LockClosedIcon className="w-5 h-5 text-gray-500" />,
+    dot: "bg-gray-400",
+    icon: <LockClosedIcon className="w-5 h-5 text-gray-400" />,
   },
+};
+
+const getStatus = (raw = "") => {
+  const key = raw.toLowerCase().trim();
+  return STATUS_CONFIG[key] || STATUS_CONFIG["verifying"];
 };
 
 // 🏆 Trophy colors for top 3
@@ -70,9 +112,11 @@ const trophyColor = (rank) => {
 
 export default function Home() {
   const [leaderboard, setLeaderboard] = useState([]);
+  const [myPosts, setMyPosts] = useState([]);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -118,6 +162,23 @@ export default function Home() {
     };
     fetchLeaderboard();
   }, []);
+
+  // 🧠 Fetch current user posts for Updates section
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "posts"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMyPosts(data);
+    }, (err) => {
+      console.error("Error fetching my posts:", err);
+    });
+    return () => unsub();
+  }, [user]);
 
   return (
     <div className="w-full md:h-screen md:overflow-hidden relative bg-white">
@@ -178,36 +239,53 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {updates.map((update, index) => {
-                  const { bg, border, icon } = statusConfig[update.status];
-                  const isLatest = index === 0;
-                  return (
-                    <Link
-                      key={index}
-                      to="/updates"
-                      state={{ filter: update.filter }}
-                      className={`flex items-center p-3 rounded-xl border ${border} bg-white hover:shadow-md transition`}
-                    >
-                      <div
-                        className={`flex items-center justify-center w-10 h-10 mr-3 rounded-lg ${bg} border ${border} relative`}
+              <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
+                {myPosts.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">No reported issues yet.</p>
+                ) : (
+                  myPosts.map((post, index) => {
+                    const statusCfg = getStatus(post.status);
+                    const isLatest = index === 0;
+                    const shortDesc = post.description?.length > 40
+                      ? post.description.substring(0, 40) + "…"
+                      : post.description || "No description provided";
+
+                    let timeAgo = "Recently";
+                    try {
+                      const d = post.createdAt?.toDate?.();
+                      if (d) timeAgo = formatDistanceToNow(d, { addSuffix: true });
+                    } catch (e) { }
+
+                    return (
+                      <Link
+                        key={post.id}
+                        to={`/details/${post.id}`}
+                        className={`group flex items-start gap-3 p-3 rounded-xl border ${statusCfg.border} bg-white hover:shadow-md transition relative overflow-hidden`}
                       >
-                        {icon}
-                        {isLatest && (
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">
-                          {update.text}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Click to view updates feed
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
+                        {/* Accent strip */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${statusCfg.dot}`} />
+
+                        <div className={`flex-shrink-0 flex items-center justify-center w-10 h-10 ml-1 rounded-lg ${statusCfg.bg} border ${statusCfg.border} relative`}>
+                          {statusCfg.icon}
+                          {isLatest && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {shortDesc}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusCfg.bg} ${statusCfg.text} border ${statusCfg.border}`}>
+                              {statusCfg.label}
+                            </span>
+                            <span className="text-[10px] text-gray-400">{timeAgo}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
               </div>
             </div>
 

@@ -96,6 +96,7 @@ const STATUS_CONFIG = {
 
 const getStatus = (raw = "") => {
   const key = raw.toLowerCase().trim();
+  if (key === "pending") return STATUS_CONFIG["verifying"];
   return STATUS_CONFIG[key] || STATUS_CONFIG["verifying"];
 };
 
@@ -145,7 +146,7 @@ const FILTER_OPTIONS = ["All", "Verifying", "Forwarding", "Rejected", "Assigned"
 
 const statusFilterMap = {
   All: null,
-  Verifying: "verifying",
+  Verifying: ["verifying", "pending"],
   Forwarding: "forwarding",
   Rejected: "rejected",
   Assigned: "assigned",
@@ -243,12 +244,11 @@ export default function Updates() {
   const location = useLocation();
   const { user } = useContext(AuthContext);
 
-  const initialFilter = location.state?.filter || "Verifying";
+  const initialFilter = location.state?.filter || "All";
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState(initialFilter);
-  const [showFilters, setShowFilters] = useState(initialFilter !== "Verifying" && initialFilter !== "All");
   const [usingDemo, setUsingDemo] = useState(false);
 
   // ── Real-time Firestore listener - Filter by current user ──
@@ -295,7 +295,11 @@ export default function Updates() {
     // Status filter
     const statusKey = statusFilterMap[activeFilter];
     if (statusKey) {
-      result = result.filter((p) => p.status?.toLowerCase().trim() === statusKey);
+      if (Array.isArray(statusKey)) {
+        result = result.filter((p) => statusKey.includes(p.status?.toLowerCase().trim()));
+      } else {
+        result = result.filter((p) => p.status?.toLowerCase().trim() === statusKey);
+      }
     }
 
     // Text search
@@ -333,12 +337,8 @@ export default function Updates() {
             </h1>
           </div>
 
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 -mr-2 rounded-xl transition-colors ${showFilters ? "bg-[#782048]/10 text-[#782048]" : "text-gray-500 hover:bg-gray-100"}`}
-          >
-            <FunnelIcon className="w-5 h-5" />
-          </button>
+          {/* Empty div for right side balance */}
+          <div className="w-9"></div>
         </div>
 
         {/* Search bar */}
@@ -361,23 +361,21 @@ export default function Updates() {
         </div>
 
         {/* Filter pills */}
-        {showFilters && (
-          <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
-            {FILTER_OPTIONS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150
-                  ${activeFilter === f
-                    ? "bg-[#782048] text-white border-[#782048] shadow-sm"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                  }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+          {FILTER_OPTIONS.map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={`flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all duration-150
+                ${activeFilter === f
+                  ? "bg-[#782048] text-white border-[#782048] shadow-sm"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Demo badge ── */}
@@ -389,27 +387,29 @@ export default function Updates() {
       )}
 
       {/* ── Content ── */}
-      <div className="px-4 pt-4 space-y-3">
+      <div className="px-4 pt-4 pb-8">
         {loading ? (
           // Skeleton cards
-          Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-100 animate-pulse">
-              <div className="w-11 h-11 rounded-xl bg-gray-100 flex-shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3 bg-gray-100 rounded-full w-5/6" />
-                <div className="h-3 bg-gray-100 rounded-full w-3/6" />
-                <div className="h-3 bg-gray-100 rounded-full w-2/6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-100 animate-pulse">
+                <div className="w-11 h-11 rounded-xl bg-gray-100 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-gray-100 rounded-full w-5/6" />
+                  <div className="h-3 bg-gray-100 rounded-full w-3/6" />
+                  <div className="h-3 bg-gray-100 rounded-full w-2/6" />
+                </div>
+                <div className="w-16 h-6 bg-gray-100 rounded-full flex-shrink-0" />
               </div>
-              <div className="w-16 h-6 bg-gray-100 rounded-full flex-shrink-0" />
-            </div>
-          ))
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <MagnifyingGlassIcon className="w-12 h-12 text-gray-200 mb-4" />
             <p className="text-gray-500 font-medium">No issues found</p>
             <p className="text-gray-400 text-sm mt-1">Your reported issues will appear here</p>
             <button
-              onClick={() => { setSearch(""); setActiveFilter("Verifying"); }}
+              onClick={() => { setSearch(""); setActiveFilter("All"); }}
               className="mt-4 text-sm text-[#782048] font-semibold hover:underline"
             >
               Clear all filters
@@ -417,12 +417,14 @@ export default function Updates() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-gray-400 font-medium pb-1">
+            <p className="text-xs text-gray-400 font-medium pb-2">
               {filtered.length} issue{filtered.length !== 1 ? "s" : ""} {activeFilter !== "All" ? `• ${activeFilter}` : ""}
             </p>
-            {filtered.map((post, i) => (
-              <PostCard key={post.id} post={post} isFirst={i === 0} />
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map((post, i) => (
+                <PostCard key={post.id} post={post} isFirst={i === 0} />
+              ))}
+            </div>
           </>
         )}
       </div>
