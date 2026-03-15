@@ -30,10 +30,13 @@ import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 // ─────────────────────────────────────────────
 const STATUS_MAP = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700 border-amber-300", step: 0 },
-  assign: { label: "Assigned", color: "bg-blue-100 text-blue-700 border-blue-300", step: 1 },
-  "at progress": { label: "In Progress", color: "bg-violet-100 text-violet-700 border-violet-300", step: 2 },
-  resolved: { label: "Resolved", color: "bg-emerald-100 text-emerald-700 border-emerald-300", step: 3 },
-  closed: { label: "Closed", color: "bg-gray-100 text-gray-600 border-gray-300", step: 4 },
+  approved: { label: "Approved", color: "bg-green-100 text-green-700 border-green-300", step: 1 },
+  rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-300", step: 1 },
+  assigned: { label: "Assigned", color: "bg-blue-100 text-blue-700 border-blue-300", step: 2 },
+  "working progress": { label: "Working Progress", color: "bg-violet-100 text-violet-700 border-violet-300", step: 3 },
+  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700 border-emerald-300", step: 4 },
+  accepted: { label: "Accepted", color: "bg-teal-100 text-teal-700 border-teal-300", step: 5 },
+  abandoned: { label: "Abandoned", color: "bg-gray-100 text-gray-600 border-gray-300", step: 6 },
 };
 
 const PRIORITY_MAP = {
@@ -44,10 +47,11 @@ const PRIORITY_MAP = {
 };
 
 const STATUS_STEPS = [
-  { key: "pending", label: "Reported", icon: ExclamationCircleIcon },
-  { key: "assign", label: "Assigned", icon: UserGroupIcon },
-  { key: "at progress", label: "In Progress", icon: WrenchScrewdriverIcon },
-  { key: "resolved", label: "Resolved", icon: CheckCircleIcon },
+  { key: "pending", label: "Pending", icon: ExclamationCircleIcon },
+  { key: "approved", label: "Approved", icon: CheckCircleIcon },
+  { key: "assigned", label: "Assigned", icon: UserGroupIcon },
+  { key: "working progress", label: "Working Progress", icon: WrenchScrewdriverIcon },
+  { key: "completed", label: "Completed", icon: CheckCircleIcon },
 ];
 
 function getStatusCfg(raw = "") {
@@ -77,7 +81,7 @@ const DEMO_POST = {
   id: "DEMO-001",
   description: "A large pothole has formed on the main road near the central market junction, causing major traffic disruption and vehicle damage. Multiple complaints have been filed. Immediate repair is required as it poses a serious safety risk, especially during night hours.",
   tags: ["#pothole", "#roadDamage", "#urgent"],
-  status: "at progress",
+  status: "working progress",
   geoData: { city: "Mumbai", region: "Maharashtra", address: "Near Central Market, MG Road", lat: 19.076, lng: 72.877 },
   createdAt: { toDate: () => new Date(Date.now() - 2 * 3600000) },
   userId: "demo-user",
@@ -97,6 +101,7 @@ const DEMO_POST = {
 };
 
 const DEMO_USER = {
+  name: "Citizen Reporter",
   username: "citizen_reporterX",
   profileImage: null,
   userRole: "User",
@@ -211,17 +216,17 @@ function FullHistoryTimeline({ post }) {
     // Synthesize from status + createdAt
     const generated = [];
     generated.push({ status: "Issue Reported", date: post.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(), note: "Complaint filed via CIVIC." });
-    if (["assign", "at progress", "resolved"].includes(post.status?.toLowerCase())) {
+    if (["approved", "assigned", "working progress", "completed", "accepted"].includes(post.status?.toLowerCase())) {
       const d = new Date((post.createdAt?.toDate?.() || new Date()).getTime() + 30 * 60000);
       generated.push({ status: "Under Review", date: d.toISOString(), note: "Admin acknowledged the report." });
     }
-    if (["at progress", "resolved"].includes(post.status?.toLowerCase())) {
+    if (["working progress", "completed", "accepted"].includes(post.status?.toLowerCase())) {
       const d = new Date((post.createdAt?.toDate?.() || new Date()).getTime() + 60 * 60000);
       generated.push({ status: "Work Assigned", date: d.toISOString(), note: "Field team dispatched." });
     }
-    if (post.status?.toLowerCase() === "resolved") {
+    if (["completed", "accepted"].includes(post.status?.toLowerCase())) {
       const d = new Date((post.createdAt?.toDate?.() || new Date()).getTime() + 120 * 60000);
-      generated.push({ status: "Issue Resolved", date: d.toISOString(), note: "Repair completed and verified." });
+      generated.push({ status: "Issue Completed", date: d.toISOString(), note: "Repair completed and verified." });
     }
     return generated;
   }, [post]);
@@ -335,7 +340,7 @@ export default function Details() {
   }, [post?.userId]);
 
   const statusCfg = getStatusCfg(post?.status);
-  const isResolved = post?.status?.toLowerCase() === "resolved";
+  const isResolved = ["completed", "accepted"].includes(post?.status?.toLowerCase());
 
   const locationStr = useMemo(() => {
     if (!post?.geoData) return "Unknown location";
@@ -409,7 +414,7 @@ export default function Details() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800 truncate">
-                  @{reporter?.username || "unknown_user"}
+                  {reporter?.name || reporter?.username || "Unknown User"}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {reporter?.userRole === "Department" && (

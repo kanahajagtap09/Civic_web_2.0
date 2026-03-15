@@ -20,12 +20,11 @@ import {
   limit,
 } from "firebase/firestore";
 
-// 🟨 Compact Updates data (could be dynamic later)
+// 🟨 Quick links to Updates page
 const updates = [
-  { id: "123456", text: "New issue reported", status: "reported" },
-  { id: "123457", text: "Issue marked in progress", status: "progress" },
-  { id: "123458", text: "Issue resolved", status: "resolved" },
-  { id: "123459", text: "Issue closed", status: "closed" },
+  { id: "trk-1", text: "Track your reported issues", status: "reported", filter: "Pending" },
+  { id: "trk-2", text: "Check issues in progress", status: "progress", filter: "Working Progress" },
+  { id: "trk-3", text: "View resolved complaints", status: "resolved", filter: "Completed" },
 ];
 
 const statusConfig = {
@@ -186,7 +185,8 @@ export default function Home() {
                   return (
                     <Link
                       key={index}
-                      to={`/details/${update.id}`}
+                      to="/updates"
+                      state={{ filter: update.filter }}
                       className={`flex items-center p-3 rounded-xl border ${border} bg-white hover:shadow-md transition`}
                     >
                       <div
@@ -202,7 +202,7 @@ export default function Home() {
                           {update.text}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Issue #{update.id}
+                          Click to view updates feed
                         </p>
                       </div>
                     </Link>

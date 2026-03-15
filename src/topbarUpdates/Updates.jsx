@@ -1,13 +1,15 @@
 // src/topbarUpdates/Updates.jsx
-import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useContext } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   collection,
   query,
   orderBy,
   onSnapshot,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
+import { AuthContext } from "../context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import {
   ExclamationCircleIcon,
@@ -34,7 +36,23 @@ const STATUS_CONFIG = {
     dot: "bg-amber-400",
     icon: <ExclamationCircleIcon className="w-5 h-5 text-amber-500" />,
   },
-  assign: {
+  approved: {
+    label: "Approved",
+    bg: "bg-green-50",
+    border: "border-green-200",
+    text: "text-green-700",
+    dot: "bg-green-400",
+    icon: <CheckCircleIcon className="w-5 h-5 text-green-500" />,
+  },
+  rejected: {
+    label: "Rejected",
+    bg: "bg-red-50",
+    border: "border-red-200",
+    text: "text-red-700",
+    dot: "bg-red-400",
+    icon: <ExclamationCircleIcon className="w-5 h-5 text-red-500" />,
+  },
+  assigned: {
     label: "Assigned",
     bg: "bg-blue-50",
     border: "border-blue-200",
@@ -42,24 +60,32 @@ const STATUS_CONFIG = {
     dot: "bg-blue-400",
     icon: <WrenchScrewdriverIcon className="w-5 h-5 text-blue-500" />,
   },
-  "at progress": {
-    label: "In Progress",
+  "working progress": {
+    label: "Working Progress",
     bg: "bg-violet-50",
     border: "border-violet-200",
     text: "text-violet-700",
     dot: "bg-violet-400",
     icon: <WrenchScrewdriverIcon className="w-5 h-5 text-violet-500" />,
   },
-  resolved: {
-    label: "Resolved",
+  completed: {
+    label: "Completed",
     bg: "bg-emerald-50",
     border: "border-emerald-200",
     text: "text-emerald-700",
     dot: "bg-emerald-400",
     icon: <CheckCircleIcon className="w-5 h-5 text-emerald-500" />,
   },
-  closed: {
-    label: "Closed",
+  accepted: {
+    label: "Accepted",
+    bg: "bg-teal-50",
+    border: "border-teal-200",
+    text: "text-teal-700",
+    dot: "bg-teal-400",
+    icon: <CheckCircleIcon className="w-5 h-5 text-teal-500" />,
+  },
+  abandoned: {
+    label: "Abandoned",
     bg: "bg-gray-50",
     border: "border-gray-200",
     text: "text-gray-600",
@@ -81,7 +107,7 @@ const DEMO_POSTS = [
     id: "demo-1",
     description: "Large pothole on Main Street causing traffic disruption near the central market crossing. Vehicles at risk.",
     tags: ["#pothole", "#roadDamage", "#urgent"],
-    status: "at progress",
+    status: "working progress",
     geoData: { city: "Mumbai", region: "Maharashtra" },
     createdAt: { toDate: () => new Date(Date.now() - 2 * 3600000) },
     userId: "demo",
@@ -99,7 +125,7 @@ const DEMO_POSTS = [
     id: "demo-3",
     description: "Street light on Brigade Road completely non-functional for over two weeks. Safety concern at night.",
     tags: ["#streetLight", "#safety", "#night"],
-    status: "assign",
+    status: "assigned",
     geoData: { city: "Bangalore", region: "Karnataka" },
     createdAt: { toDate: () => new Date(Date.now() - 24 * 3600000) },
     userId: "demo",
@@ -108,22 +134,25 @@ const DEMO_POSTS = [
     id: "demo-4",
     description: "Water logging issue resolved after drainage repair near Sector 21 park area.",
     tags: ["#waterLogging", "#drainage", "#resolved"],
-    status: "resolved",
+    status: "completed",
     geoData: { city: "Noida", region: "UP" },
     createdAt: { toDate: () => new Date(Date.now() - 48 * 3600000) },
     userId: "demo",
   },
 ];
 
-const FILTER_OPTIONS = ["All", "Pending", "Assigned", "In Progress", "Resolved", "Closed"];
+const FILTER_OPTIONS = ["All", "Pending", "Approved", "Rejected", "Assigned", "Working Progress", "Completed", "Accepted", "Abandoned"];
 
 const statusFilterMap = {
   All: null,
   Pending: "pending",
-  Assigned: "assign",
-  "In Progress": "at progress",
-  Resolved: "resolved",
-  Closed: "closed",
+  Approved: "approved",
+  Rejected: "rejected",
+  Assigned: "assigned",
+  "Working Progress": "working progress",
+  Completed: "completed",
+  Accepted: "accepted",
+  Abandoned: "abandoned",
 };
 
 // ──────────────────────────────────────────────
@@ -211,16 +240,31 @@ function PostCard({ post, isFirst }) {
 // ──────────────────────────────────────────────
 export default function Updates() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useContext(AuthContext);
+
+  const initialFilter = location.state?.filter || "All";
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(initialFilter);
+  const [showFilters, setShowFilters] = useState(initialFilter !== "All");
   const [usingDemo, setUsingDemo] = useState(false);
 
-  // ── Real-time Firestore listener ──
+  // ── Real-time Firestore listener - Filter by current user ──
   useEffect(() => {
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Query only posts by the current user
+    const q = query(
+      collection(db, "posts"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -242,7 +286,7 @@ export default function Updates() {
       }
     );
     return () => unsub();
-  }, []);
+  }, [user]);
 
   // ── Filtered posts ──
   const filtered = useMemo(() => {
@@ -340,7 +384,7 @@ export default function Updates() {
       {usingDemo && !loading && (
         <div className="mx-4 mt-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-center gap-2">
           <ExclamationCircleIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
-          Showing demo data — no live posts found in the database.
+          Showing demo data — you haven't reported any issues yet.
         </div>
       )}
 
@@ -363,7 +407,7 @@ export default function Updates() {
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <MagnifyingGlassIcon className="w-12 h-12 text-gray-200 mb-4" />
             <p className="text-gray-500 font-medium">No issues found</p>
-            <p className="text-gray-400 text-sm mt-1">Try different search terms or filters</p>
+            <p className="text-gray-400 text-sm mt-1">Your reported issues will appear here</p>
             <button
               onClick={() => { setSearch(""); setActiveFilter("All"); }}
               className="mt-4 text-sm text-[#782048] font-semibold hover:underline"
